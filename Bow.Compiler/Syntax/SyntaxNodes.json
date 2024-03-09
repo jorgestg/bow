@@ -1,0 +1,138 @@
+{
+  "definitions": {
+    "CompilationUnit": {
+      "children": {
+        "ModClause": { "type": "ModClause", "optional": true },
+        "UseClauses": { "type": "UseClause", "array": true },
+        "Items": { "type": "Item", "array": true }
+      }
+    },
+    "ModClause": {
+      "children": {
+        "ModKeyword": "Token",
+        "Name": "Name"
+      }
+    },
+    "UseClause": {
+      "children": {
+        "UseKeyword": "Token",
+        "Name": "Name"
+      }
+    },
+    "Name": { "abstract": true },
+    "SimpleName": {
+      "extends": "Name",
+      "children": {
+        "Identifier": "IdentifierToken"
+      }
+    },
+    "QualifiedName": {
+      "extends": "Name",
+      "children": {
+        "Parts": { "type": "IdentifierToken", "array": true }
+      }
+    },
+    "Item": {
+      "abstract": true,
+      "children": {
+        "AccessModifier": { "type": "Token", "optional": true },
+        "Identifier": "IdentifierToken"
+      }
+    },
+    "StructDefinition": {
+      "extends": "Item",
+      "children": {
+        "AccessModifier": {
+          "type": "Token",
+          "optional": true,
+          "override": true
+        },
+        "Keyword": "Token",
+        "Identifier": { "type": "IdentifierToken", "override": true },
+        "OpeningBrace": "Token",
+        "Fields": { "type": "FieldDeclaration", "array": true },
+        "Methods": { "type": "FunctionDefinition", "array": true },
+        "ClosingBrace": "Token"
+      }
+    },
+    "FieldDeclaration": {
+      "children": {
+        "AccessModifier": { "type": "Token", "optional": true },
+        "MutKeyword": { "type": "Token", "optional": true },
+        "Identifier": "IdentifierToken",
+        "Type": "TypeReference"
+      }
+    },
+    "TypeReference": {
+      "abstract": true
+    },
+    "NamedTypeReference": {
+      "extends": "TypeReference",
+      "children": {
+        "Name": "Name"
+      }
+    },
+    "KeywordTypeReference": {
+      "extends": "TypeReference",
+      "children": {
+        "Keyword": "Token"
+      }
+    },
+    "EnumDefinition": {
+      "extends": "Item",
+      "children": {
+        "AccessModifier": {
+          "type": "Token",
+          "optional": true,
+          "override": true
+        },
+        "Keyword": "Token",
+        "Identifier": { "type": "IdentifierToken", "override": true },
+        "OpeningBrace": "Token",
+        "Cases": { "type": "EnumCaseDeclaration", "array": true },
+        "Methods": { "type": "FunctionDefinition", "array": true },
+        "ClosingBrace": "Token"
+      }
+    },
+    "EnumCaseDeclaration": {
+      "children": {
+        "Identifier": "IdentifierToken",
+        "AssociatedValue": {
+          "type": "EnumCaseAssociatedValue",
+          "optional": true
+        }
+      }
+    },
+    "EnumCaseAssociatedValue": {
+      "children": {
+        "OpeningParenthesis": "Token",
+        "TypeReference": "TypeReference",
+        "ClosingParenthesis": "Token"
+      }
+    },
+    "FunctionDefinition": {
+      "extends": "Item",
+      "children": {
+        "AccessModifier": {
+          "type": "Token",
+          "optional": true,
+          "override": true
+        },
+        "Keyword": "Token",
+        "Identifier": { "type": "IdentifierToken", "override": true },
+        "OpeningParenthesis": "Token",
+        "Parameters": { "type": "ParameterDeclaration", "array": true },
+        "ClosingParenthesis": "Token",
+        "ReturnType": "TypeReference"
+      }
+    },
+    "ParameterDeclaration": {
+      "children": {
+        "MutKeyword": { "type": "Token", "optional": true },
+        "Ampersand": { "type": "Token", "optional": true },
+        "Identifier": "IdentifierToken",
+        "Type": { "type": "TypeReference", "optional": true }
+      }
+    }
+  }
+}

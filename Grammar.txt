@@ -1,0 +1,23 @@
+compilation-unit = mod-clause? use-clause* item+
+mod-declaration = 'mod' ID ('.' ID)*
+use-clause = 'use' ID ('.' ID)*
+
+item = struct-definition | enum-definition | function-definition
+item-access-modifier = 'pub' | 'mod'
+member-access-modifier = 'pub' | 'file' | 'mod'
+
+struct-definition = item-access-modifier struct-keyword ID '{' field-declarations '}'
+struct-keyword = 'struct' | 'data'
+field-declarations = field-declaration ((',' field-declaration)+ ','?)?
+field-declaration = member-access-modifier? 'mut'? ID type-name
+
+enum-definition = item-access-modifier 'enum' ID '{' enum-member-declarations '}'
+enum-member-declarations = enum-member-declaration ((',' enum-member-declaration)+ ','?)?
+enum-member-declaration = ID ('(' type-name ')')?
+
+function-definition = 'func' ID '(' parameter-declarations? ')' type-name? block
+parameter-declarations = parameter-declaration ((',' parameter-declaration)+ ','?)? 
+parameter-declaration = 'mut'? '&'? ID type-name
+
+STRING = '"' .* '"'
+ID = [a-zA-Z_][a-zA-Z_0-9]*
