@@ -32,6 +32,28 @@
         "Parts": { "type": "IdentifierToken", "array": true }
       }
     },
+    "TypeReference": {
+      "abstract": true
+    },
+    "NamedTypeReference": {
+      "extends": "TypeReference",
+      "children": {
+        "Name": "Name"
+      }
+    },
+    "KeywordTypeReference": {
+      "extends": "TypeReference",
+      "children": {
+        "Keyword": "Token"
+      }
+    },
+    "PointerTypeReference": {
+      "extends": "TypeReference",
+      "children": {
+        "Star": "Token",
+        "Type": "TypeReference"
+      }
+    },
     "Item": {
       "abstract": true,
       "children": {
@@ -61,21 +83,6 @@
         "MutKeyword": { "type": "Token", "optional": true },
         "Identifier": "IdentifierToken",
         "Type": "TypeReference"
-      }
-    },
-    "TypeReference": {
-      "abstract": true
-    },
-    "NamedTypeReference": {
-      "extends": "TypeReference",
-      "children": {
-        "Name": "Name"
-      }
-    },
-    "KeywordTypeReference": {
-      "extends": "TypeReference",
-      "children": {
-        "Keyword": "Token"
       }
     },
     "EnumDefinition": {
@@ -127,9 +134,10 @@
       }
     },
     "ParameterDeclaration": {
+      "abstract": true,
       "children": {
         "MutKeyword": { "type": "Token", "optional": true },
-        "Ampersand": { "type": "Token", "optional": true },
+        "Star": { "type": "Token", "optional": true },
         "Identifier": "IdentifierToken",
         "Type": { "type": "TypeReference", "optional": true }
       }

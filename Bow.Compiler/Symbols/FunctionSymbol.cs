@@ -100,7 +100,6 @@ public sealed class LocalSymbol(
 
     public FunctionSymbol Function { get; } = function;
     public bool IsMutable => Syntax.MutKeyword != null;
-    public bool IsByReference => Syntax.Ampersand != null;
     public bool IsSelf => Syntax.Identifier.ContextualKeywordKind == ContextualKeywordKind.Self;
     public TypeSymbol Type { get; } = type;
 }

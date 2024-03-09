@@ -5,6 +5,7 @@ public enum TokenKind
     // Special
     Unknown = -1,
     EndOfFile,
+    NewLine,
 
     // Keywords
     F32,
@@ -13,6 +14,7 @@ public enum TokenKind
     Enum,
     Func,
     Mut,
+    Never,
     Pub,
 
     S8,
@@ -40,7 +42,7 @@ public enum TokenKind
     Comma,
     LeftParenthesis,
     RightParenthesis,
-    Ampersand
+    Star
 }
 
 public enum ContextualKeywordKind
