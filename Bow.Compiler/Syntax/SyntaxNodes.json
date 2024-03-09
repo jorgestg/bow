@@ -97,13 +97,13 @@
     "EnumCaseDeclaration": {
       "children": {
         "Identifier": "IdentifierToken",
-        "AssociatedValue": {
-          "type": "EnumCaseAssociatedValue",
+        "Argument": {
+          "type": "EnumCaseArgument",
           "optional": true
         }
       }
     },
-    "EnumCaseAssociatedValue": {
+    "EnumCaseArgument": {
       "children": {
         "OpeningParenthesis": "Token",
         "TypeReference": "TypeReference",

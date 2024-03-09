@@ -129,7 +129,7 @@ internal sealed class CEmitter(Compilation compilation)
     {
         foreach (var enumCase in symbol.Cases)
         {
-            if (enumCase.AssociatedValueType != null)
+            if (enumCase.ArgumentType != null)
             {
                 return true;
             }
@@ -189,8 +189,7 @@ internal sealed class CEmitter(Compilation compilation)
         writer.Write(' ');
         writer.WriteLine('{');
         writer.Indent++;
-        writer.Write("enum ");
-        writer.WriteLine('{');
+        writer.WriteLine("enum {");
         writer.Indent++;
 
         var first = true;
@@ -205,23 +204,29 @@ internal sealed class CEmitter(Compilation compilation)
             first = false;
         }
 
+        writer.WriteLine();
         writer.Indent--;
         writer.WriteLine("} tag;");
-        writer.Write("union {");
+        writer.WriteLine("union {");
         writer.Indent++;
         foreach (var enumCase in symbol.Cases)
         {
-            if (enumCase.AssociatedValueType == null)
+            if (enumCase.ArgumentType == null)
             {
                 continue;
             }
 
+            WriteTypeName(writer, enumCase.ArgumentType);
+            writer.Write(' ');
             writer.Write(enumCase.Name);
             writer.WriteLine(';');
         }
 
         writer.Indent--;
-        writer.Write("} value");
+        writer.WriteLine("} value;");
+        writer.Indent--;
+        writer.Write('}');
+        writer.WriteLine(';');
     }
 
     private void EmitStruct(StructSymbol symbol)

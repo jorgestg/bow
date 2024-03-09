@@ -27,12 +27,10 @@ public sealed class EnumSymbol(ModuleSymbol module, EnumDefinitionSyntax syntax)
         var builder = ImmutableArray.CreateBuilder<EnumCaseSymbol>(Syntax.Cases.Count);
         foreach (var syntax in Syntax.Cases)
         {
-            var associatedValueType =
-                syntax.AssociatedValue == null
-                    ? null
-                    : Binder.BindType(syntax.AssociatedValue.TypeReference);
+            var argumentType =
+                syntax.Argument == null ? null : Binder.BindType(syntax.Argument.TypeReference);
 
-            EnumCaseSymbol @case = new(this, syntax, associatedValueType);
+            EnumCaseSymbol @case = new(this, syntax, argumentType);
             builder.Add(@case);
         }
 
@@ -65,5 +63,5 @@ public sealed class EnumCaseSymbol(
     public override SymbolAccessibility Accessibility => SymbolAccessibility.Public;
 
     public EnumSymbol Enum { get; } = @enum;
-    public TypeSymbol? AssociatedValueType { get; } = associatedValueType;
+    public TypeSymbol? ArgumentType { get; } = associatedValueType;
 }
