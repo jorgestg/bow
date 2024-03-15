@@ -91,10 +91,7 @@ public sealed class Compilation
                 }
                 case null:
                 {
-                    var fileName = syntaxTree.SourceText.FileName;
-                    var directoryName = Path.GetDirectoryName(fileName);
-                    var moduleName = string.IsNullOrEmpty(directoryName) ? "main" : directoryName;
-                    var builder = FindOrCreateBuilder(builders, moduleName, root);
+                    var builder = FindOrCreateBuilder(builders, "main", root);
                     builder.AddRoot(root);
                     continue;
                 }

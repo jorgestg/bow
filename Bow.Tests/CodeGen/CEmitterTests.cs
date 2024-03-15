@@ -126,7 +126,7 @@ public sealed class CEmitterTests
         ImmutableArray<OutputText> actual = CEmitter.Emit(compilation);
 
         Assert.Equal(2, actual.Length);
-        Assert.Equal("bow_test.h", actual[0].FileName);
+        Assert.Equal("test.h", actual[0].FileName);
         Assert.Equal(
             """
             #pragma once
@@ -144,6 +144,48 @@ public sealed class CEmitterTests
                 s32 x;
                 s32 y;
             };
+
+            """,
+            actual[1].Text
+        );
+    }
+
+    [Fact]
+    public void Emit_WhenFunction_EmitsCFunction()
+    {
+        var root = SyntaxTree.Create(
+            "test/test.bow",
+            """
+            mod test
+
+            fun main() s32 {
+            }
+            """
+        );
+
+        Compilation compilation = new([root]);
+
+        ImmutableArray<OutputText> actual = CEmitter.Emit(compilation);
+
+        Assert.Equal(2, actual.Length);
+        Assert.Equal("test.h", actual[0].FileName);
+
+        Assert.Equal(
+            """
+            #pragma once
+            #include "bow.h"
+
+            """,
+            actual[0].Text
+        );
+
+        Assert.Equal("test.c", actual[1].FileName);
+        Assert.Equal(
+            """
+            #include "test.h"
+            s32 main();
+            s32 main() {
+            }
 
             """,
             actual[1].Text

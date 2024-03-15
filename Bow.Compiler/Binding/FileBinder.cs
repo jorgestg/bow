@@ -1,3 +1,4 @@
+using System.Collections.Frozen;
 using Bow.Compiler.Diagnostics;
 using Bow.Compiler.Symbols;
 using Bow.Compiler.Syntax;
@@ -8,11 +9,10 @@ internal sealed class FileBinder(ModuleSymbol module, SyntaxTree syntaxTree) : B
 {
     private readonly ModuleSymbol _module = module;
 
-    public override DiagnosticBag Diagnostics => Parent.Diagnostics;
     public SyntaxTree SyntaxTree { get; } = syntaxTree;
 
-    private Dictionary<string, Symbol>? _lazySymbols;
-    private Dictionary<string, Symbol> SymbolMap => _lazySymbols ??= CreateSymbolMap();
+    private FrozenDictionary<string, Symbol>? _lazySymbols;
+    private FrozenDictionary<string, Symbol> SymbolMap => _lazySymbols ??= CreateSymbolMap();
 
     public override Symbol? Lookup(string name)
     {
@@ -68,7 +68,7 @@ internal sealed class FileBinder(ModuleSymbol module, SyntaxTree syntaxTree) : B
         return symbol ?? new MissingSymbol(syntax);
     }
 
-    private Dictionary<string, Symbol> CreateSymbolMap()
+    private FrozenDictionary<string, Symbol> CreateSymbolMap()
     {
         Dictionary<string, Symbol> symbols = [];
 
@@ -119,7 +119,7 @@ internal sealed class FileBinder(ModuleSymbol module, SyntaxTree syntaxTree) : B
             symbols.TryAdd(module.Name, module);
         }
 
-        return symbols;
+        return symbols.ToFrozenDictionary(StringComparer.Ordinal);
     }
 
     private Symbol? BindSimpleName(SimpleNameSyntax syntax)

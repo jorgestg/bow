@@ -8,7 +8,12 @@ internal abstract class Binder(Binder parent)
 {
     public Binder Parent { get; } = parent;
 
-    public abstract DiagnosticBag Diagnostics { get; }
+    public virtual DiagnosticBag Diagnostics => Parent.Diagnostics;
+
+    public static FileBinder GetFileBinder(IItemSymbol item)
+    {
+        return item.Module.Binder.GetFileBinder(item.Syntax.SyntaxTree);
+    }
 
     public virtual Symbol? Lookup(string name)
     {

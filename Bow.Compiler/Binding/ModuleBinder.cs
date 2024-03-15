@@ -1,3 +1,4 @@
+using System.Collections.Frozen;
 using Bow.Compiler.Diagnostics;
 using Bow.Compiler.Symbols;
 using Bow.Compiler.Syntax;
@@ -12,18 +13,13 @@ internal sealed class ModuleBinder : Binder
         : base((Binder?)module.Container?.Binder ?? module.Compilation.Binder)
     {
         _module = module;
-
-        Diagnostics = Parent.Diagnostics;
     }
-
-    public override DiagnosticBag Diagnostics { get; }
-    public IReadOnlyCollection<Symbol> Members => MembersMap.Values;
 
     private ImmutableArray<FileBinder>? _lazyFileBinders;
     private ImmutableArray<FileBinder> FileBinders => _lazyFileBinders ??= CreateFileBinders();
 
-    private Dictionary<string, Symbol>? _lazyMembers;
-    private Dictionary<string, Symbol> MembersMap => _lazyMembers ??= CreateMembersMap();
+    private FrozenDictionary<string, Symbol>? _lazyMembers;
+    private FrozenDictionary<string, Symbol> MembersMap => _lazyMembers ??= CreateMembersMap();
 
     public override Symbol? LookupMember(string name)
     {
@@ -59,7 +55,7 @@ internal sealed class ModuleBinder : Binder
         return fileBinders.MoveToImmutable();
     }
 
-    private Dictionary<string, Symbol> CreateMembersMap()
+    private FrozenDictionary<string, Symbol> CreateMembersMap()
     {
         Dictionary<string, Symbol> members = [];
         foreach (var type in _module.Types)
@@ -92,6 +88,6 @@ internal sealed class ModuleBinder : Binder
             );
         }
 
-        return members;
+        return members.ToFrozenDictionary();
     }
 }

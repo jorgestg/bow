@@ -10,11 +10,14 @@ public abstract class FunctionSymbol : Symbol
 }
 
 public sealed class FunctionItemSymbol(ModuleSymbol module, FunctionDefinitionSyntax syntax)
-    : FunctionSymbol
+    : FunctionSymbol,
+        IItemSymbol
 {
     public override string Name => Syntax.Identifier.IdentifierText;
     public override FunctionDefinitionSyntax Syntax { get; } = syntax;
-    internal override Binder Binder => throw new NotImplementedException();
+
+    private FunctionItemBinder? _lazyBinder;
+    internal override FunctionItemBinder Binder => _lazyBinder ??= new(this);
 
     public override SymbolAccessibility Accessibility =>
         SymbolFacts.GetAccessibilityFromToken(Syntax.AccessModifier, SymbolAccessibility.File);
@@ -29,6 +32,8 @@ public sealed class FunctionItemSymbol(ModuleSymbol module, FunctionDefinitionSy
     public override TypeSymbol ReturnType => _lazyReturnType ??= BindReturnType();
 
     // public ImmutableArray<LocalSymbol> Locals { get; }
+
+    ItemSyntax IItemSymbol.Syntax => Syntax;
 
     private ImmutableArray<ParameterSymbol> CreateParameters()
     {

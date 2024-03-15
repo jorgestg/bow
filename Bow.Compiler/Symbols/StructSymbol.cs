@@ -3,7 +3,9 @@ using Bow.Compiler.Syntax;
 
 namespace Bow.Compiler.Symbols;
 
-public sealed class StructSymbol(ModuleSymbol module, StructDefinitionSyntax syntax) : TypeSymbol
+public sealed class StructSymbol(ModuleSymbol module, StructDefinitionSyntax syntax)
+    : TypeSymbol,
+        IItemSymbol
 {
     public override string Name => Syntax.Identifier.IdentifierText;
 
@@ -23,6 +25,8 @@ public sealed class StructSymbol(ModuleSymbol module, StructDefinitionSyntax syn
 
     private ImmutableArray<MethodSymbol>? _lazyMethods;
     public ImmutableArray<MethodSymbol> Methods => _lazyMethods ??= CreateMethods();
+
+    ItemSyntax IItemSymbol.Syntax => Syntax;
 
     private ImmutableArray<FieldSymbol> CreateFields()
     {

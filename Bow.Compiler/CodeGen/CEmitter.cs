@@ -265,6 +265,7 @@ internal sealed class CEmitter(Compilation compilation)
     private void EmitFunctionItemDefinition(FunctionItemSymbol symbol)
     {
         WriteSignature(_impl, symbol);
+        _impl.Write(' ');
         _impl.WriteLine('{');
         _impl.WriteLine('}');
     }

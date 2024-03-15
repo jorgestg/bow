@@ -151,13 +151,18 @@ internal sealed class Parser
                     accessModifier = Advance();
                     break;
 
-                case TokenKind.Struct:
-                    items.Add(ParseStructDefinition(accessModifier));
+                case TokenKind.Enum:
+                    items.Add(ParseEnumDefinition(accessModifier));
                     MatchNewLine();
                     break;
 
-                case TokenKind.Enum:
-                    items.Add(ParseEnumDefinition(accessModifier));
+                case TokenKind.Fun:
+                    items.Add(ParseFunctionDefinition(accessModifier));
+                    MatchNewLine();
+                    break;
+
+                case TokenKind.Struct:
+                    items.Add(ParseStructDefinition(accessModifier));
                     MatchNewLine();
                     break;
 

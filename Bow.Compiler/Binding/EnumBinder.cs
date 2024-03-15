@@ -3,18 +3,9 @@ using Bow.Compiler.Symbols;
 
 namespace Bow.Compiler.Binding;
 
-internal sealed class EnumBinder : Binder
+internal sealed class EnumBinder(EnumSymbol @enum) : Binder(GetParentBinder(@enum))
 {
-    private readonly EnumSymbol _enum;
-
-    public EnumBinder(EnumSymbol @enum)
-        : base(GetParentBinder(@enum))
-    {
-        _enum = @enum;
-        Diagnostics = Parent.Diagnostics;
-    }
-
-    public override DiagnosticBag Diagnostics { get; }
+    private readonly EnumSymbol _enum = @enum;
 
     private Dictionary<string, Symbol>? _lazyMembers;
     private Dictionary<string, Symbol> MembersMap => _lazyMembers ??= CreateMembersMap();

@@ -3,33 +3,19 @@ using Bow.Compiler.Symbols;
 
 namespace Bow.Compiler.Binding;
 
-internal sealed class StructBinder : Binder
+internal sealed class StructBinder(StructSymbol @struct) : Binder(GetFileBinder(@struct))
 {
-    private readonly StructSymbol _struct;
-
-    public StructBinder(StructSymbol @struct)
-        : base(GetParentBinder(@struct))
-    {
-        _struct = @struct;
-        Diagnostics = Parent.Diagnostics;
-    }
-
-    public override DiagnosticBag Diagnostics { get; }
+    private readonly StructSymbol _struct = @struct;
 
     private Dictionary<string, Symbol>? _lazyMembers;
-    private Dictionary<string, Symbol> MembersMap => _lazyMembers ??= CreateMembersMap();
+    private Dictionary<string, Symbol> Members => _lazyMembers ??= BindMembers();
 
     public override Symbol? LookupMember(string name)
     {
-        return MembersMap.GetValueOrDefault(name);
+        return Members.GetValueOrDefault(name);
     }
 
-    private static FileBinder GetParentBinder(StructSymbol @struct)
-    {
-        return @struct.Module.Binder.GetFileBinder(@struct.Syntax.SyntaxTree);
-    }
-
-    private Dictionary<string, Symbol> CreateMembersMap()
+    private Dictionary<string, Symbol> BindMembers()
     {
         Dictionary<string, Symbol> members = [];
         foreach (var field in _struct.Fields)
