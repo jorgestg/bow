@@ -1,4 +1,3 @@
-using System.Text.RegularExpressions;
 using Bow.Compiler.Syntax;
 
 namespace Bow.Compiler.Symbols;
@@ -20,9 +19,13 @@ public static class SymbolFacts
             return SymbolAccessibility.Public;
         }
 
+        if (token.Kind == TokenKind.Mod)
+        {
+            return SymbolAccessibility.Module;
+        }
+
         return token.ContextualKeywordKind switch
         {
-            ContextualKeywordKind.Mod => SymbolAccessibility.Module,
             ContextualKeywordKind.File => SymbolAccessibility.File,
             _ => mostPrivate
         };

@@ -36,6 +36,7 @@ public enum TokenKind
 
     // Literals
     Identifier,
+    IntegerLiteral,
     StringLiteral,
     UnterminatedStringLiteral,
 
@@ -54,7 +55,6 @@ public enum ContextualKeywordKind
     None,
     Data,
     File,
-    Self,
     Type
 }
 

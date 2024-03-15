@@ -20,7 +20,7 @@ public struct SyntaxListBuilder<TNode>(SyntaxTree syntaxTree)
     {
         if (_nodes == null)
         {
-            _nodes = new TNode[2];
+            _nodes = new TNode[4];
             return;
         }
 
@@ -35,26 +35,21 @@ public struct SyntaxListBuilder<TNode>(SyntaxTree syntaxTree)
     public readonly SyntaxList<TNode> ToSyntaxList()
     {
         var nodes = _nodes ?? [];
-        return new SyntaxList<TNode>(SyntaxTree, nodes, _count);
+        if (_count == nodes.Length)
+        {
+            return new SyntaxList<TNode>(SyntaxTree, nodes);
+        }
+
+        return new SyntaxList<TNode>(SyntaxTree, nodes[.._count]);
     }
 }
 
-public sealed class SyntaxList<TNode> : SyntaxNode, IReadOnlyList<TNode>
+public sealed class SyntaxList<TNode>(SyntaxTree syntaxTree, TNode[] nodes)
+    : SyntaxNode(syntaxTree),
+        IReadOnlyList<TNode>
     where TNode : SyntaxNode
 {
-    private readonly ArraySegment<TNode> _nodes;
-
-    public SyntaxList(SyntaxTree syntaxTree, TNode[] nodes)
-        : base(syntaxTree)
-    {
-        _nodes = nodes;
-    }
-
-    internal SyntaxList(SyntaxTree syntaxTree, TNode[] nodes, int count)
-        : base(syntaxTree)
-    {
-        _nodes = new ArraySegment<TNode>(nodes, 0, count);
-    }
+    private readonly TNode[] _nodes = nodes;
 
     public TNode this[int index] => _nodes[index];
 
@@ -62,7 +57,7 @@ public sealed class SyntaxList<TNode> : SyntaxNode, IReadOnlyList<TNode>
     {
         get
         {
-            if (_nodes.Count == 0)
+            if (_nodes.Length == 0)
             {
                 return new Location(0, 0);
             }
@@ -71,7 +66,7 @@ public sealed class SyntaxList<TNode> : SyntaxNode, IReadOnlyList<TNode>
         }
     }
 
-    public int Count => _nodes.Count;
+    public int Count => _nodes.Length;
 
     public int CountBy(Predicate<TNode> predicate)
     {
@@ -89,7 +84,7 @@ public sealed class SyntaxList<TNode> : SyntaxNode, IReadOnlyList<TNode>
 
     public ArraySegment<TNode>.Enumerator GetEnumerator()
     {
-        return _nodes.GetEnumerator();
+        return new ArraySegment<TNode>(_nodes).GetEnumerator();
     }
 
     IEnumerator<TNode> IEnumerable<TNode>.GetEnumerator()

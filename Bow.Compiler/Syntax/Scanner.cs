@@ -14,7 +14,7 @@ internal sealed class Scanner(SyntaxFactory syntaxFactory)
 
     public Token NextToken()
     {
-        var newLine = SkipWhitespace();
+        Token? newLine = SkipWhitespace();
         if (newLine != null)
         {
             return newLine;
@@ -37,6 +37,7 @@ internal sealed class Scanner(SyntaxFactory syntaxFactory)
             '*' => CreateToken(TokenKind.Star),
             '"' => CreateStringLiteralToken(),
             _ when char.IsAsciiLetter(c) => CreateIdentifierOrKeywordToken(),
+            _ when char.IsDigit(c) => CreateNumberToken(),
             _ => CreateToken(TokenKind.Unknown)
         };
     }
@@ -52,8 +53,7 @@ internal sealed class Scanner(SyntaxFactory syntaxFactory)
                     return null;
 
                 case '\n':
-                    newLineIndex = _currentIndex;
-                    _currentIndex++;
+                    newLineIndex = _currentIndex++;
                     break;
 
                 case ' ':
@@ -118,12 +118,14 @@ internal sealed class Scanner(SyntaxFactory syntaxFactory)
             "enum" => CreateToken(TokenKind.Enum),
             "fun" => CreateToken(TokenKind.Fun),
             "mut" => CreateToken(TokenKind.Mut),
+            "mod" => CreateToken(TokenKind.Mod),
             "never" => CreateToken(TokenKind.Never),
             "pub" => CreateToken(TokenKind.Pub),
             "s8" => CreateToken(TokenKind.S8),
             "s16" => CreateToken(TokenKind.S16),
             "s32" => CreateToken(TokenKind.S32),
             "s64" => CreateToken(TokenKind.S64),
+            "self" => CreateToken(TokenKind.Self),
             "struct" => CreateToken(TokenKind.Struct),
             "u8" => CreateToken(TokenKind.U8),
             "u16" => CreateToken(TokenKind.U16),
@@ -142,6 +144,41 @@ internal sealed class Scanner(SyntaxFactory syntaxFactory)
             // "const" => CreateToken(TokenKind.Const),
             _ => _syntaxFactory.Identifier(_startIndex, _currentIndex - _startIndex)
         };
+    }
+
+    // number: [0-9]+ ('_' [0-9]+)*
+    private Token CreateNumberToken()
+    {
+        while (true)
+        {
+            switch (CurrentChar)
+            {
+                case '0':
+                case '1':
+                case '2':
+                case '3':
+                case '4':
+                case '5':
+                case '6':
+                case '7':
+                case '8':
+                case '9':
+                    _currentIndex++;
+                    break;
+
+                case '_':
+                    if (char.IsDigit(LookAheadChar))
+                    {
+                        _currentIndex++;
+                        continue;
+                    }
+
+                    goto default;
+
+                default:
+                    return CreateToken(TokenKind.IntegerLiteral);
+            }
+        }
     }
 
     private Token CreateToken(TokenKind kind)

@@ -42,7 +42,9 @@ public sealed class EnumSymbol(ModuleSymbol module, EnumDefinitionSyntax syntax)
         var builder = ImmutableArray.CreateBuilder<MethodSymbol>(Syntax.Methods.Count);
         foreach (var syntax in Syntax.Methods)
         {
-            var returnType = Binder.BindType(syntax.ReturnType);
+            var returnType =
+                syntax.ReturnType == null ? BuiltInModule.Unit : Binder.BindType(syntax.ReturnType);
+
             MethodSymbol method = new(this, syntax, returnType);
             builder.Add(method);
         }

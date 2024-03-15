@@ -2,14 +2,34 @@ using Bow.Compiler.Diagnostics;
 
 namespace Bow.Compiler.Syntax;
 
-public class SyntaxTree(SourceText sourceText)
+public sealed class SyntaxTree
 {
-    public SourceText SourceText { get; } = sourceText;
+    private SyntaxTree(SourceText sourceText)
+    {
+        SourceText = sourceText;
 
-    private Parser? _lazyParser;
-    private Parser Parser => _lazyParser ??= new(new SyntaxFactory(this));
-    public DiagnosticBagView Diagnostics => Parser.Diagnostics;
+        SyntaxFactory syntaxFactory = new(this);
+        Parser = new Parser(syntaxFactory);
+    }
+
+    public SourceText SourceText { get; }
+
+    internal Parser Parser { get; }
+
+    public DiagnosticBagView Diagnostics
+    {
+        get
+        {
+            _lazyRoot ??= Parser.ParseCompilationUnit();
+            return Parser.Diagnostics;
+        }
+    }
 
     private CompilationUnitSyntax? _lazyRoot;
     public CompilationUnitSyntax Root => _lazyRoot ??= Parser.ParseCompilationUnit();
+
+    public static SyntaxTree Create(string fileName, string text)
+    {
+        return new SyntaxTree(new SourceText(fileName, text));
+    }
 }

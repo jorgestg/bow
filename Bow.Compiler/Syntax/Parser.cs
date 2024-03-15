@@ -19,18 +19,24 @@ internal sealed class Parser
         _diagnostics = new DiagnosticBag();
 
         _previous = null!;
-        _current = _scanner.NextToken();
-        _next = _scanner.NextToken();
+        _current = null!;
+        _next = null!;
     }
+
+    public Scanner Scanner => _scanner;
 
     public DiagnosticBagView Diagnostics => _diagnostics.AsView();
 
     // compilation-unit = mod-clause? use-clause* item+
     public CompilationUnitSyntax ParseCompilationUnit()
     {
+        _current = _scanner.NextToken();
+        _next = _scanner.NextToken();
+
         var modClause = _current.Kind == TokenKind.Mod ? ParseModClause() : null;
         var useClauses = ParseUseClauses();
-        return _syntaxFactory.CompilationUnit(modClause, useClauses, ParseItems());
+        var items = ParseItems();
+        return _syntaxFactory.CompilationUnit(modClause, useClauses, items);
     }
 
     // mod-clause = 'mod' name NL
@@ -127,8 +133,8 @@ internal sealed class Parser
     private SyntaxList<ItemSyntax> ParseItems()
     {
         var items = _syntaxFactory.SyntaxListBuilder<ItemSyntax>();
-        Token? accessModifier = null;
 
+        Token? accessModifier = null;
         while (true)
         {
             switch (_current.Kind)
@@ -150,9 +156,13 @@ internal sealed class Parser
                     MatchNewLine();
                     break;
 
+                case TokenKind.Enum:
+                    items.Add(ParseEnumDefinition(accessModifier));
+                    MatchNewLine();
+                    break;
+
                 default:
                     _diagnostics.AddError(_current, DiagnosticMessages.ItemExpected);
-
                     Advance();
                     continue;
             }
@@ -346,7 +356,6 @@ internal sealed class Parser
         var parameters = ParseParameterDeclarations();
         var closeParenthesis = Match(TokenKind.CloseParenthesis);
         var returnType = _current.Kind != TokenKind.OpenBrace ? ParseTypeReference() : null;
-        var body = ParseBlock();
         return _syntaxFactory.FunctionDefinition(
             accessModifier,
             funKeyword,
@@ -354,8 +363,7 @@ internal sealed class Parser
             openParenthesis,
             parameters,
             closeParenthesis,
-            returnType,
-            body
+            returnType
         );
     }
 
@@ -363,9 +371,29 @@ internal sealed class Parser
     private SyntaxList<ParameterDeclarationSyntax> ParseParameterDeclarations()
     {
         var parameters = _syntaxFactory.SyntaxListBuilder<ParameterDeclarationSyntax>();
-        // create loop, handle getting stuck and resyncing on a }, ) or EOF
+        while (true)
+        {
+            switch (_current.Kind)
+            {
+                case TokenKind.EndOfFile:
+                case TokenKind.CloseParenthesis:
+                case TokenKind.OpenBrace:
+                    return parameters.ToSyntaxList();
 
-        return parameters.ToSyntaxList();
+                case TokenKind.NewLine:
+                    Advance();
+                    continue;
+
+                default:
+                    parameters.Add(ParseParameterDeclaration());
+                    if (_current.Kind == TokenKind.Comma)
+                    {
+                        Advance();
+                    }
+
+                    continue;
+            }
+        }
     }
 
     // parameter-declaration = 'mut'? (ID type-reference | '*'? 'self')

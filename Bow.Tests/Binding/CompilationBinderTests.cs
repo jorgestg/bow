@@ -8,59 +8,17 @@ namespace Bow.Tests.Binding;
 public class CompilationBinderTests
 {
     [Fact]
-    public void BindModules_MergesRoots()
+    public void BindModules_WhenMultipleRoots_CreatesSingleModule()
     {
-        SyntaxTree root1 =
+        Compilation compilation =
             new(
-                new SourceText("/test/mod1.bow", "mod m"),
-                f =>
-                    f.CompilationUnit(
-                        f.ModClause(f.Identifier(0, 3), f.SimpleName(f.Identifier(4, 1))),
-                        f.SyntaxList<UseClauseSyntax>(),
-                        f.SyntaxList<ItemSyntax>()
-                    )
+                [
+                    SyntaxTree.Create("/test/mod1.bow", "mod m"),
+                    SyntaxTree.Create("/test/mod2.bow", "mod m"),
+                    SyntaxTree.Create("/test/mod3.bow", "mod m.a"),
+                    SyntaxTree.Create("/test/mod4.bow", "mod m.a")
+                ]
             );
-
-        SyntaxTree root2 =
-            new(
-                new SourceText("/test/mod2.bow", "mod m"),
-                f =>
-                    f.CompilationUnit(
-                        f.ModClause(f.Identifier(0, 3), f.SimpleName(f.Identifier(4, 1))),
-                        f.SyntaxList<UseClauseSyntax>(),
-                        f.SyntaxList<ItemSyntax>()
-                    )
-            );
-
-        SyntaxTree root3 =
-            new(
-                new SourceText("/test/mod3.bow", "mod m.a"),
-                f =>
-                    f.CompilationUnit(
-                        f.ModClause(
-                            f.Identifier(0, 3),
-                            f.QualifiedName(f.SyntaxList(f.Identifier(4, 1), f.Identifier(6, 1)))
-                        ),
-                        f.SyntaxList<UseClauseSyntax>(),
-                        f.SyntaxList<ItemSyntax>()
-                    )
-            );
-
-        SyntaxTree root4 =
-            new(
-                new SourceText("/test/mod4.bow", "mod m.a"),
-                f =>
-                    f.CompilationUnit(
-                        f.ModClause(
-                            f.Identifier(0, 3),
-                            f.QualifiedName(f.SyntaxList(f.Identifier(4, 1), f.Identifier(6, 1)))
-                        ),
-                        f.SyntaxList<UseClauseSyntax>(),
-                        f.SyntaxList<ItemSyntax>()
-                    )
-            );
-
-        Compilation compilation = new([root1, root2, root3, root4]);
 
         ImmutableArray<ModuleSymbol> actual = compilation.Modules;
 

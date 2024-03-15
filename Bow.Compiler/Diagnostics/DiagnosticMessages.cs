@@ -9,6 +9,7 @@ internal static class DiagnosticMessages
     public const string NameIsAlreadyDefined = "'{0}' is already defined.";
     public const string TokenMismatch = "'{0}' expected, but got '{1}'.";
     public const string TypeNameExpected = "Type name expected.";
-    public const string MemberExpected = "Field or method expected.";
     public const string ItemExpected = "Type or function expected.";
+    public const string MemberExpected = "Field or method expected.";
+    public const string ParameterExpected = "Parameter expected.";
 }
