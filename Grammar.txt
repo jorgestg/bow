@@ -1,5 +1,5 @@
 compilation-unit = mod-clause? use-clause* item+
-mod-declaration = 'mod' name NL
+mod-clause = 'mod' name NL
 use-clause = 'use' name NL
 
 name = ID | qualified-name
@@ -14,15 +14,20 @@ member-access-modifier = 'pub' | 'file' | 'mod'
 
 item = struct-definition | enum-definition | function-definition
 
-struct-definition = item-access-modifier struct-keyword ID '{' field-declarations? '}'
+struct-definition = item-access-modifier? struct-keyword ID '{' member-declarations? '}'
 struct-keyword = 'struct' | 'data'
-field-declarations = NL field-declaration (NL field-declaration)* NL
+member-declarations = NL member-declaration (NL member-declaration)* NL
+member-declaration = field-declaration | method-definition
 field-declaration = member-access-modifier? 'mut'? ID type-reference
+method-definition = member-access-modifier? function-definition
 
-enum-definition = item-access-modifier 'enum' ID '{' enum-case-declarations '}'
-enum-case-declarations = NL enum-case-declaration (NL enum-case-declaration)* NL
+enum-definition = item-access-modifier 'enum' ID '{' enum-member-declarations '}'
+enum-member-declarations = NL enum-member-declaration (NL enum-member-declaration)* NL
+enum-member-declaration = enum-case-declaration | method-definition
 enum-case-declaration = ID ('(' type-reference ')')?
+method-definition = member-access-modifier? function-definition
 
+function-item-definition = item-access-modifier? function-declaration
 function-definition = 'fun' ID '(' parameter-declarations? ')' type-reference? block
 parameter-declarations = parameter-declaration ((',' parameter-declaration)+ ','?)? 
 parameter-declaration = 'mut'? (ID type-reference | '*'? 'self')

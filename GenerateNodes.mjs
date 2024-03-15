@@ -84,7 +84,7 @@ for (const name in definitions) {
       .map(([, typeName, camelCaseName]) => `${typeName} ${camelCaseName}`)
       .join(", ")})
     {
-        return new ${name}Syntax(_syntaxTree, ${properties
+        return new ${name}Syntax(SyntaxTree, ${properties
       .map(([, , camelCaseName]) => camelCaseName)
       .join(", ")});
     }

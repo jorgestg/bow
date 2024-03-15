@@ -12,7 +12,8 @@ public enum TokenKind
     F64,
 
     Enum,
-    Func,
+    Fun,
+    Mod,
     Mut,
     Never,
     Pub,
@@ -22,6 +23,7 @@ public enum TokenKind
     S32,
     S64,
 
+    Self,
     Struct,
 
     U8,
@@ -33,15 +35,17 @@ public enum TokenKind
     Use,
 
     // Literals
-    StringLiteral,
     Identifier,
+    StringLiteral,
+    UnterminatedStringLiteral,
 
     // Symbols
-    LeftBrace,
-    RightBrace,
     Comma,
-    LeftParenthesis,
-    RightParenthesis,
+    Dot,
+    OpenBrace,
+    CloseBrace,
+    OpenParenthesis,
+    CloseParenthesis,
     Star
 }
 
@@ -50,7 +54,6 @@ public enum ContextualKeywordKind
     None,
     Data,
     File,
-    Mod,
     Self,
     Type
 }
@@ -74,8 +77,6 @@ public class Token(SyntaxTree syntaxTree, TokenKind kind, Location location)
             {
                 "data" => ContextualKeywordKind.Data,
                 "file" => ContextualKeywordKind.File,
-                "mod" => ContextualKeywordKind.Mod,
-                "self" => ContextualKeywordKind.Self,
                 "type" => ContextualKeywordKind.Type,
                 _ => ContextualKeywordKind.None
             };

@@ -54,6 +54,12 @@
         "Type": "TypeReference"
       }
     },
+    "MissingTypeReference": {
+      "extends": "TypeReference",
+      "children": {
+        "Found": "Token"
+      }
+    },
     "Item": {
       "abstract": true,
       "children": {
@@ -71,10 +77,10 @@
         },
         "Keyword": "Token",
         "Identifier": { "type": "IdentifierToken", "override": true },
-        "OpeningBrace": "Token",
+        "OpenBrace": "Token",
         "Fields": { "type": "FieldDeclaration", "array": true },
         "Methods": { "type": "FunctionDefinition", "array": true },
-        "ClosingBrace": "Token"
+        "CloseBrace": "Token"
       }
     },
     "FieldDeclaration": {
@@ -95,10 +101,10 @@
         },
         "Keyword": "Token",
         "Identifier": { "type": "IdentifierToken", "override": true },
-        "OpeningBrace": "Token",
+        "OpenBrace": "Token",
         "Cases": { "type": "EnumCaseDeclaration", "array": true },
         "Methods": { "type": "FunctionDefinition", "array": true },
-        "ClosingBrace": "Token"
+        "CloseBrace": "Token"
       }
     },
     "EnumCaseDeclaration": {
@@ -112,9 +118,9 @@
     },
     "EnumCaseArgument": {
       "children": {
-        "OpeningParenthesis": "Token",
+        "OpenParenthesis": "Token",
         "TypeReference": "TypeReference",
-        "ClosingParenthesis": "Token"
+        "CloseParenthesis": "Token"
       }
     },
     "FunctionDefinition": {
@@ -127,18 +133,32 @@
         },
         "Keyword": "Token",
         "Identifier": { "type": "IdentifierToken", "override": true },
-        "OpeningParenthesis": "Token",
+        "OpenParenthesis": "Token",
         "Parameters": { "type": "ParameterDeclaration", "array": true },
-        "ClosingParenthesis": "Token",
-        "ReturnType": "TypeReference"
+        "CloseParenthesis": "Token",
+        "ReturnType": { "type": "TypeReference", "optional": true }
       }
     },
     "ParameterDeclaration": {
       "abstract": true,
       "children": {
-        "MutKeyword": { "type": "Token", "optional": true },
-        "Star": { "type": "Token", "optional": true },
+        "MutKeyword": { "type": "Token", "optional": true }
+      }
+    },
+    "SimpleParameterDeclaration": {
+      "extends": "ParameterDeclaration",
+      "children": {
+        "MutKeyword": { "type": "Token", "optional": true, "override": true },
         "Identifier": "IdentifierToken",
+        "Type": "TypeReference"
+      }
+    },
+    "SelfParameterDeclaration": {
+      "extends": "ParameterDeclaration",
+      "children": {
+        "MutKeyword": { "type": "Token", "optional": true, "override": true },
+        "Star": { "type": "Token", "optional": true },
+        "Keyword": "Token",
         "Type": { "type": "TypeReference", "optional": true }
       }
     }

@@ -10,7 +10,7 @@ public sealed class DiagnosticBag
 
     public void Add(Diagnostic diagnostic)
     {
-        ReallocateIfNecessary();
+        ResizeIfNecessary();
         _diagnostics![_count++] = diagnostic;
     }
 
@@ -48,7 +48,7 @@ public sealed class DiagnosticBag
         Add(diagnostic);
     }
 
-    private void ReallocateIfNecessary()
+    private void ResizeIfNecessary()
     {
         if (_diagnostics == null)
         {
@@ -61,9 +61,7 @@ public sealed class DiagnosticBag
             return;
         }
 
-        var newArray = new Diagnostic[_count * 2];
-        Array.Copy(_diagnostics, newArray, _diagnostics.Length);
-        _diagnostics = newArray;
+        Array.Resize(ref _diagnostics, _count * 2);
     }
 
     public DiagnosticBagView AsView()

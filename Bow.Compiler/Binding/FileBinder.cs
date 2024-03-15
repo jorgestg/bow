@@ -116,18 +116,7 @@ internal sealed class FileBinder(ModuleSymbol module, SyntaxTree syntaxTree) : B
             }
 
             var module = (ModuleSymbol)symbol;
-            foreach (var boundSymbol in module.Binder.Members)
-            {
-                var isAccessible =
-                    boundSymbol.Accessibility == SymbolAccessibility.Public
-                    || boundSymbol.Accessibility == SymbolAccessibility.Module
-                        && _module.RootModule == module.RootModule;
-
-                if (isAccessible)
-                {
-                    symbols.TryAdd(boundSymbol.Name, boundSymbol);
-                }
-            }
+            symbols.TryAdd(module.Name, module);
         }
 
         return symbols;
