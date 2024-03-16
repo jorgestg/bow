@@ -53,6 +53,7 @@ public sealed class FunctionItemSymbol(ModuleSymbol module, FunctionDefinitionSy
                 case SelfParameterDeclarationSyntax self:
                 {
                     Debug.Assert(self.Type != null);
+                    Debug.Assert(self.Star == null);
                     var type = Binder.BindType(self.Type);
                     var parameter = new SelfParameterSymbol(this, self, type);
                     builder.Add(parameter);
@@ -83,8 +84,17 @@ public sealed class MethodSymbol(
     public override FunctionDefinitionSyntax Syntax { get; } = syntax;
     internal override Binder Binder => throw new NotImplementedException();
 
-    public override SymbolAccessibility Accessibility =>
-        SymbolFacts.GetAccessibilityFromToken(Syntax.AccessModifier);
+    public override SymbolAccessibility Accessibility
+    {
+        get
+        {
+            var defaultVisibility = Container is StructSymbol { IsData: true }
+                ? SymbolAccessibility.Public
+                : SymbolAccessibility.Private;
+
+            return SymbolFacts.GetAccessibilityFromToken(Syntax.AccessModifier, defaultVisibility);
+        }
+    }
 
     public TypeSymbol Container { get; } = container;
 
@@ -113,6 +123,7 @@ public sealed class MethodSymbol(
 
                 case SelfParameterDeclarationSyntax self:
                 {
+                    Debug.Assert(self.Type == null);
                     var type =
                         self.Star == null ? Container : new PointerTypeSymbol(self, Container);
 
@@ -128,34 +139,4 @@ public sealed class MethodSymbol(
 
         return builder.MoveToImmutable();
     }
-}
-
-public abstract class ParameterSymbol(FunctionSymbol function, TypeSymbol type) : Symbol
-{
-    public abstract override ParameterDeclarationSyntax Syntax { get; }
-    internal override Binder Binder => Function.Binder;
-
-    public FunctionSymbol Function { get; } = function;
-    public bool IsMutable => Syntax.MutKeyword != null;
-    public TypeSymbol Type { get; } = type;
-}
-
-public sealed class SimpleParameterSymbol(
-    FunctionSymbol function,
-    SimpleParameterDeclarationSyntax syntax,
-    TypeSymbol type
-) : ParameterSymbol(function, type)
-{
-    public override string Name => Syntax.Identifier.IdentifierText;
-    public override SimpleParameterDeclarationSyntax Syntax { get; } = syntax;
-}
-
-public sealed class SelfParameterSymbol(
-    FunctionSymbol function,
-    SelfParameterDeclarationSyntax syntax,
-    TypeSymbol type
-) : ParameterSymbol(function, type)
-{
-    public override string Name => "self";
-    public override SelfParameterDeclarationSyntax Syntax { get; } = syntax;
 }

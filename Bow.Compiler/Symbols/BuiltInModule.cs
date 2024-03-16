@@ -4,6 +4,48 @@ public sealed class BuiltInModule
 {
     public static readonly BuiltInModule Instance = new();
 
+    public static readonly TypeSymbol Float32 = new PrimitiveTypeSymbol(
+        Instance,
+        "f32",
+        PrimitiveTypeKind.Float32
+    );
+
+    public static readonly TypeSymbol Float64 = new PrimitiveTypeSymbol(
+        Instance,
+        "f64",
+        PrimitiveTypeKind.Float64
+    );
+
+    public static readonly TypeSymbol Never = new PrimitiveTypeSymbol(
+        Instance,
+        "never",
+        PrimitiveTypeKind.Never
+    );
+
+    public static readonly TypeSymbol Signed8 = new PrimitiveTypeSymbol(
+        Instance,
+        "s8",
+        PrimitiveTypeKind.Signed8
+    );
+
+    public static readonly TypeSymbol Signed16 = new PrimitiveTypeSymbol(
+        Instance,
+        "s16",
+        PrimitiveTypeKind.Signed16
+    );
+
+    public static readonly TypeSymbol Signed32 = new PrimitiveTypeSymbol(
+        Instance,
+        "s32",
+        PrimitiveTypeKind.Signed32
+    );
+
+    public static readonly TypeSymbol Signed64 = new PrimitiveTypeSymbol(
+        Instance,
+        "s64",
+        PrimitiveTypeKind.Signed64
+    );
+
     public static readonly TypeSymbol Unit = new PrimitiveTypeSymbol(
         Instance,
         "unit",
@@ -32,42 +74,6 @@ public sealed class BuiltInModule
         Instance,
         "u64",
         PrimitiveTypeKind.Unsigned64
-    );
-
-    public static readonly TypeSymbol Signed8 = new PrimitiveTypeSymbol(
-        Instance,
-        "s8",
-        PrimitiveTypeKind.Signed8
-    );
-
-    public static readonly TypeSymbol Signed16 = new PrimitiveTypeSymbol(
-        Instance,
-        "s16",
-        PrimitiveTypeKind.Signed16
-    );
-
-    public static readonly TypeSymbol Signed32 = new PrimitiveTypeSymbol(
-        Instance,
-        "s32",
-        PrimitiveTypeKind.Signed32
-    );
-
-    public static readonly TypeSymbol Signed64 = new PrimitiveTypeSymbol(
-        Instance,
-        "s64",
-        PrimitiveTypeKind.Signed64
-    );
-
-    public static readonly TypeSymbol Float32 = new PrimitiveTypeSymbol(
-        Instance,
-        "f32",
-        PrimitiveTypeKind.Float32
-    );
-
-    public static readonly TypeSymbol Float64 = new PrimitiveTypeSymbol(
-        Instance,
-        "f64",
-        PrimitiveTypeKind.Float64
     );
 
     private BuiltInModule()

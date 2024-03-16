@@ -27,17 +27,23 @@ internal sealed class FileBinder(ModuleSymbol module, SyntaxTree syntaxTree) : B
             {
                 TokenKind.F32 => BuiltInModule.Float32,
                 TokenKind.F64 => BuiltInModule.Float64,
+                TokenKind.Never => BuiltInModule.Never,
                 TokenKind.S8 => BuiltInModule.Signed8,
                 TokenKind.S16 => BuiltInModule.Signed16,
                 TokenKind.S32 => BuiltInModule.Signed32,
                 TokenKind.S64 => BuiltInModule.Signed64,
+                TokenKind.Unit => BuiltInModule.Unit,
                 TokenKind.U8 => BuiltInModule.Unsigned8,
                 TokenKind.U16 => BuiltInModule.Unsigned16,
                 TokenKind.U32 => BuiltInModule.Unsigned32,
                 TokenKind.U64 => BuiltInModule.Unsigned64,
-                TokenKind.Unit => BuiltInModule.Unit,
                 _ => throw new UnreachableException()
             };
+        }
+
+        if (syntax is PointerTypeReferenceSyntax pointerType)
+        {
+            return BindType(pointerType.Type);
         }
 
         var namedTypeSyntax = (NamedTypeReferenceSyntax)syntax;

@@ -1,4 +1,0 @@
-Maybe in the C emitter I want to emit every symbol with the module prefix.
-Change use to #define-s without the prefix
-
-For the entry point we maybe want to synthetize a function named main and call the prefixed entry point there

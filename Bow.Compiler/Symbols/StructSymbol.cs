@@ -65,8 +65,17 @@ public sealed class FieldSymbol(
 {
     public override string Name => Syntax.Identifier.IdentifierText;
 
-    public override SymbolAccessibility Accessibility =>
-        SymbolFacts.GetAccessibilityFromToken(Syntax.AccessModifier);
+    public override SymbolAccessibility Accessibility
+    {
+        get
+        {
+            var defaultVisibility = Struct.IsData
+                ? SymbolAccessibility.Public
+                : SymbolAccessibility.Private;
+
+            return SymbolFacts.GetAccessibilityFromToken(Syntax.AccessModifier, defaultVisibility);
+        }
+    }
 
     public override FieldDeclarationSyntax Syntax { get; } = syntax;
     internal override Binder Binder => Struct.Binder;

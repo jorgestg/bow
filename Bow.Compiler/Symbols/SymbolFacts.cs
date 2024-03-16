@@ -6,12 +6,12 @@ public static class SymbolFacts
 {
     public static SymbolAccessibility GetAccessibilityFromToken(
         Token? token,
-        SymbolAccessibility mostPrivate = SymbolAccessibility.Private
+        SymbolAccessibility defaultVisibility
     )
     {
         if (token == null)
         {
-            return mostPrivate;
+            return defaultVisibility;
         }
 
         if (token.Kind == TokenKind.Pub)
@@ -27,7 +27,7 @@ public static class SymbolFacts
         return token.ContextualKeywordKind switch
         {
             ContextualKeywordKind.File => SymbolAccessibility.File,
-            _ => mostPrivate
+            _ => defaultVisibility
         };
     }
 }

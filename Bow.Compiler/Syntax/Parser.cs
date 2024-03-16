@@ -128,6 +128,25 @@ internal sealed class Parser
         }
     }
 
+    private bool IsTypeReferenceStart()
+    {
+        return _current.Kind
+            is TokenKind.F32
+                or TokenKind.F64
+                or TokenKind.Never
+                or TokenKind.S8
+                or TokenKind.S16
+                or TokenKind.S32
+                or TokenKind.S64
+                or TokenKind.U8
+                or TokenKind.U16
+                or TokenKind.U32
+                or TokenKind.U64
+                or TokenKind.Unit
+                or TokenKind.Identifier
+                or TokenKind.Star;
+    }
+
     // item-access-modifier = 'pub' | 'mod'
     // item = struct-definition | enum-definition | function-definition
     private SyntaxList<ItemSyntax> ParseItems()
@@ -162,7 +181,9 @@ internal sealed class Parser
                     break;
 
                 case TokenKind.Struct:
-                    items.Add(ParseStructDefinition(accessModifier));
+                case TokenKind.Identifier
+                    when _current.ContextualKeywordKind == ContextualKeywordKind.Data:
+                    items.Add(ParseStructDefinition(accessModifier, Advance()));
                     MatchNewLine();
                     break;
 
@@ -177,9 +198,8 @@ internal sealed class Parser
     // struct-definition = item-access-modifier? struct-keyword ID '{' member-declarations? '}'
     // struct-keyword = 'struct' | 'data'
     // member-declarations = NL member-declaration (NL member-declaration)* NL
-    private StructDefinitionSyntax ParseStructDefinition(Token? accessModifier)
+    private StructDefinitionSyntax ParseStructDefinition(Token? accessModifier, Token keyword)
     {
-        var structKeyword = Match(TokenKind.Struct);
         var identifier = MatchIdentifier();
         var openBrace = Match(TokenKind.OpenBrace);
         MatchNewLine();
@@ -188,7 +208,7 @@ internal sealed class Parser
         var closeBrace = Match(TokenKind.CloseBrace);
         return _syntaxFactory.StructDefinition(
             accessModifier,
-            structKeyword,
+            keyword,
             identifier,
             openBrace,
             fields,
@@ -401,29 +421,39 @@ internal sealed class Parser
         }
     }
 
-    // parameter-declaration = 'mut'? (ID type-reference | '*'? 'self')
+    // parameter-declaration = simple-parameter-declaration | self-parameter-declaration
+    // simple-parameter-declaration = 'mut'? ID type-reference
+    // self-parameter-declaration = 'mut'? '*'? 'self' | 'mut'? 'self' type-reference
     private ParameterDeclarationSyntax ParseParameterDeclaration()
     {
-        var mutKeyword = _current.Kind == TokenKind.Mut ? Advance() : null;
+        var mutableKeyword = _current.Kind == TokenKind.Mut ? Advance() : null;
         if (_current.Kind == TokenKind.Star)
         {
             var starToken = Advance();
             var selfKeyword = Match(TokenKind.Self);
-            var optType = _current.Kind is TokenKind.Comma or TokenKind.CloseParenthesis
-                ? null
-                : ParseTypeReference();
-
             return _syntaxFactory.SelfParameterDeclaration(
-                mutKeyword,
+                mutableKeyword,
                 starToken,
                 selfKeyword,
-                optType
+                null
+            );
+        }
+
+        if (_current.Kind == TokenKind.Self)
+        {
+            var selfKeyword = Match(TokenKind.Self);
+            var optionalType = IsTypeReferenceStart() ? ParseTypeReference() : null;
+            return _syntaxFactory.SelfParameterDeclaration(
+                mutableKeyword,
+                null,
+                selfKeyword,
+                optionalType
             );
         }
 
         var identifier = MatchIdentifier();
         var type = ParseTypeReference();
-        return _syntaxFactory.SimpleParameterDeclaration(mutKeyword, identifier, type);
+        return _syntaxFactory.SimpleParameterDeclaration(mutableKeyword, identifier, type);
     }
 
     private Token Advance()
