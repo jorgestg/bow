@@ -15,10 +15,10 @@ public sealed class Compilation
     }
 
     internal CompilationBinder Binder { get; }
-    public DiagnosticBagView Diagnostics => Binder.Diagnostics.AsView();
 
     public ImmutableArray<SyntaxTree> SyntaxTrees { get; }
     public ImmutableArray<ModuleSymbol> Modules { get; }
+    public ImmutableArray<Diagnostic> Diagnostics { get; }
 
     public FunctionSymbol? GetEntryPoint()
     {
@@ -72,18 +72,18 @@ public sealed class Compilation
                 case SimpleNameSyntax simpleName:
                 {
                     var name = simpleName.Identifier.IdentifierText;
-                    var builder = FindOrCreateBuilder(builders, name, root);
+                    var builder = FindOrCreateBuilder(builders, name);
                     builder.AddRoot(root);
                     continue;
                 }
                 case QualifiedNameSyntax qualifiedName:
                 {
                     var name = qualifiedName.Parts[0].IdentifierText;
-                    var builder = FindOrCreateBuilder(builders, name, root);
+                    var builder = FindOrCreateBuilder(builders, name);
                     for (var i = 1; i < qualifiedName.Parts.Count; i++)
                     {
                         name = qualifiedName.Parts[i].IdentifierText;
-                        builder = FindOrCreateBuilder(builder.SubModuleBuilders, name, root);
+                        builder = FindOrCreateBuilder(builder.SubModuleBuilders, name);
                     }
 
                     builder.AddRoot(root);
@@ -91,7 +91,7 @@ public sealed class Compilation
                 }
                 case null:
                 {
-                    var builder = FindOrCreateBuilder(builders, "main", root);
+                    var builder = FindOrCreateBuilder(builders, "main");
                     builder.AddRoot(root);
                     continue;
                 }
@@ -111,8 +111,7 @@ public sealed class Compilation
 
         static ModuleSymbolBuilder FindOrCreateBuilder(
             List<ModuleSymbolBuilder> builders,
-            string name,
-            CompilationUnitSyntax root
+            string name
         )
         {
             foreach (var builder in builders)
@@ -125,7 +124,7 @@ public sealed class Compilation
                 return builder;
             }
 
-            ModuleSymbolBuilder newBuilder = new(name, root);
+            ModuleSymbolBuilder newBuilder = new(name);
             builders.Add(newBuilder);
             return newBuilder;
         }

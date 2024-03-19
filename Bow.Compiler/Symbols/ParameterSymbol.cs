@@ -7,6 +7,7 @@ public abstract class ParameterSymbol(FunctionSymbol function, TypeSymbol type) 
 {
     public abstract override ParameterDeclarationSyntax Syntax { get; }
     internal override Binder Binder => Function.Binder;
+    public override ModuleSymbol Module => Function.Module;
 
     public FunctionSymbol Function { get; } = function;
     public bool IsMutable => Syntax.MutKeyword != null;

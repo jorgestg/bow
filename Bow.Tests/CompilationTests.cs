@@ -3,9 +3,9 @@ using Bow.Compiler;
 using Bow.Compiler.Symbols;
 using Bow.Compiler.Syntax;
 
-namespace Bow.Tests.Binding;
+namespace Bow.Tests;
 
-public class CompilationBinderTests
+public class CompilationTests
 {
     [Fact]
     public void BindModules_WhenMultipleRoots_CreatesSingleModule()
@@ -23,10 +23,45 @@ public class CompilationBinderTests
         ImmutableArray<ModuleSymbol> actual = compilation.Modules;
 
         Assert.Single(actual);
-        Assert.Equal("m", actual[0].Name);
-        Assert.Equal(2, actual[0].Roots.Length);
-        Assert.Single(actual[0].SubModules);
-        Assert.Equal("a", actual[0].SubModules[0].Name);
-        Assert.Equal(2, actual[0].SubModules[0].Roots.Length);
+
+        var m = actual[0];
+        Assert.Equal("m", m.Name);
+        Assert.Equal(2, m.Roots.Length);
+        Assert.Single(m.SubModules);
+
+        var a = m.SubModules[0];
+        Assert.Equal("a", a.Name);
+        Assert.Equal(2, m.SubModules[0].Roots.Length);
+    }
+
+    [Fact]
+    public void BindModules_WhenNestedModules_AssignsCorrectRoots()
+    {
+        Compilation compilation =
+            new(
+                [
+                    SyntaxTree.Create("/test/mod1.bow", "mod a.b"),
+                    SyntaxTree.Create("/test/mod2.bow", "mod a.b.c")
+                ]
+            );
+
+        ImmutableArray<ModuleSymbol> actual = compilation.Modules;
+
+        Assert.Single(actual);
+
+        var a = actual[0];
+        Assert.Equal("a", a.Name);
+        Assert.Empty(a.Roots);
+        Assert.Single(a.SubModules);
+
+        var b = a.SubModules[0];
+        Assert.Equal("b", b.Name);
+        Assert.Single(b.Roots);
+        Assert.Single(b.SubModules);
+
+        var c = b.SubModules[0];
+        Assert.Equal("c", c.Name);
+        Assert.Single(c.Roots);
+        Assert.Empty(c.SubModules);
     }
 }

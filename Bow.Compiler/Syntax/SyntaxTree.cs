@@ -16,12 +16,18 @@ public sealed class SyntaxTree
 
     internal Parser Parser { get; }
 
-    public DiagnosticBagView Diagnostics
+    private ImmutableArray<Diagnostic> _lazyDiagnostics;
+    public ImmutableArray<Diagnostic> Diagnostics
     {
         get
         {
-            _lazyRoot ??= Parser.ParseCompilationUnit();
-            return Parser.Diagnostics;
+            if (_lazyDiagnostics.IsDefault)
+            {
+                _lazyRoot ??= Parser.ParseCompilationUnit();
+                _lazyDiagnostics = Parser.GetDiagnostics();
+            }
+
+            return _lazyDiagnostics;
         }
     }
 

@@ -1,4 +1,3 @@
-using Bow.Compiler.Diagnostics;
 using Bow.Compiler.Symbols;
 
 namespace Bow.Compiler.Binding;
@@ -6,8 +5,6 @@ namespace Bow.Compiler.Binding;
 internal sealed class CompilationBinder(Compilation compilation) : Binder(null!)
 {
     private readonly Compilation _compilation = compilation;
-
-    public override DiagnosticBag Diagnostics { get; } = new();
 
     public override Symbol? Lookup(string name)
     {

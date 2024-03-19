@@ -68,20 +68,6 @@ public sealed class SyntaxList<TNode>(SyntaxTree syntaxTree, TNode[] nodes)
 
     public int Count => _nodes.Length;
 
-    public int CountBy(Predicate<TNode> predicate)
-    {
-        var count = 0;
-        foreach (var node in _nodes)
-        {
-            if (predicate(node))
-            {
-                count++;
-            }
-        }
-
-        return count;
-    }
-
     public ArraySegment<TNode>.Enumerator GetEnumerator()
     {
         return new ArraySegment<TNode>(_nodes).GetEnumerator();

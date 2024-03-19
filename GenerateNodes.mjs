@@ -33,7 +33,7 @@ function toCamelCase(name) {
 function processNames([name, typeOrOpts]) {
   let typeName = typeOrOpts.type ? typeOrOpts.type : typeOrOpts;
   typeName =
-    typeName === "Token" || typeName === "IdentifierToken"
+    typeName.includes("Token") || typeName[0].toLowerCase() === typeName[0]
       ? typeName
       : `${typeName}Syntax`;
 
@@ -46,6 +46,7 @@ function processNames([name, typeOrOpts]) {
 function first(children) {
   const props = [];
   for (const name in children) {
+    if (name === "Slot") continue;
     if (children[name].optional) {
       props.push(name);
       continue;

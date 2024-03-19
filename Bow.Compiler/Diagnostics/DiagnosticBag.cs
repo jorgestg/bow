@@ -1,17 +1,15 @@
-using System.Collections;
 using Bow.Compiler.Syntax;
 
 namespace Bow.Compiler.Diagnostics;
 
 public sealed class DiagnosticBag
 {
-    private Diagnostic[]? _diagnostics;
-    private int _count;
+    private ImmutableArray<Diagnostic>.Builder? _diagnostics;
 
     public void Add(Diagnostic diagnostic)
     {
-        ResizeIfNecessary();
-        _diagnostics![_count++] = diagnostic;
+        _diagnostics ??= ImmutableArray.CreateBuilder<Diagnostic>();
+        _diagnostics.Add(diagnostic);
     }
 
     public void AddError(SyntaxNode syntax, string message)
@@ -48,55 +46,8 @@ public sealed class DiagnosticBag
         Add(diagnostic);
     }
 
-    private void ResizeIfNecessary()
+    public ImmutableArray<Diagnostic> ToImmutableArray()
     {
-        if (_diagnostics == null)
-        {
-            _diagnostics = new Diagnostic[2];
-            return;
-        }
-
-        if (_count < _diagnostics.Length)
-        {
-            return;
-        }
-
-        Array.Resize(ref _diagnostics, _count * 2);
-    }
-
-    public DiagnosticBagView AsView()
-    {
-        return new DiagnosticBagView(
-            _diagnostics == null
-                ? ArraySegment<Diagnostic>.Empty
-                : new ArraySegment<Diagnostic>(_diagnostics, 0, _count)
-        );
-    }
-}
-
-public readonly struct DiagnosticBagView : IEnumerable<Diagnostic>
-{
-    private readonly ArraySegment<Diagnostic> _diagnostics;
-
-    internal DiagnosticBagView(ArraySegment<Diagnostic> diagnostics)
-    {
-        _diagnostics = diagnostics;
-    }
-
-    public int Count => _diagnostics.Count;
-
-    public ArraySegment<Diagnostic>.Enumerator GetEnumerator()
-    {
-        return _diagnostics.GetEnumerator();
-    }
-
-    IEnumerator<Diagnostic> IEnumerable<Diagnostic>.GetEnumerator()
-    {
-        return GetEnumerator();
-    }
-
-    IEnumerator IEnumerable.GetEnumerator()
-    {
-        return GetEnumerator();
+        return _diagnostics?.DrainToImmutable() ?? [];
     }
 }

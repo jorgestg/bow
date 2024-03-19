@@ -1,40 +1,25 @@
-using System.Collections.Frozen;
-using Bow.Compiler.Diagnostics;
 using Bow.Compiler.Symbols;
 
 namespace Bow.Compiler.Binding;
 
-internal sealed class FunctionItemBinder(FunctionItemSymbol function)
-    : Binder(GetFileBinder(function))
+internal sealed class FunctionBinder(FunctionSymbol function) : Binder(GetParentBinder(function))
 {
-    private readonly FunctionItemSymbol _function = function;
-
-    private FrozenDictionary<string, ParameterSymbol>? _lazyParameters;
-    private FrozenDictionary<string, ParameterSymbol> Parameters =>
-        _lazyParameters ??= BindParameters();
+    private readonly FunctionSymbol _function = function;
 
     public override Symbol? Lookup(string name)
     {
-        return Parameters.TryGetValue(name, out var symbol) ? symbol : Parent.Lookup(name);
+        return _function.ParameterMap.TryGetValue(name, out var symbol)
+            ? symbol
+            : Parent.Lookup(name);
     }
 
-    private FrozenDictionary<string, ParameterSymbol> BindParameters()
+    private static Binder GetParentBinder(FunctionSymbol function)
     {
-        Dictionary<string, ParameterSymbol> parameters = [];
-        foreach (var parameter in _function.Parameters)
+        return function switch
         {
-            if (parameters.TryAdd(parameter.Name, parameter))
-            {
-                continue;
-            }
-
-            Diagnostics.AddError(
-                parameter.Syntax,
-                DiagnosticMessages.NameIsAlreadyDefined,
-                parameter.Name
-            );
-        }
-
-        return parameters.ToFrozenDictionary();
+            FunctionItemSymbol i => GetFileBinder(i),
+            MethodSymbol m => m.Container.Binder,
+            _ => throw new UnreachableException()
+        };
     }
 }

@@ -485,3 +485,6 @@ $RECYCLE.BIN/
 
 # Generated files
 *.g.cs
+
+# Mono registry
+.mono

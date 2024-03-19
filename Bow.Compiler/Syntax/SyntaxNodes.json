@@ -70,6 +70,7 @@
     "StructDefinition": {
       "extends": "Item",
       "children": {
+        "Slot": "int",
         "AccessModifier": {
           "type": "Token",
           "optional": true,
@@ -85,6 +86,7 @@
     },
     "FieldDeclaration": {
       "children": {
+        "Slot": "int",
         "AccessModifier": { "type": "Token", "optional": true },
         "MutKeyword": { "type": "Token", "optional": true },
         "Identifier": "IdentifierToken",
@@ -94,6 +96,7 @@
     "EnumDefinition": {
       "extends": "Item",
       "children": {
+        "Slot": "int",
         "AccessModifier": {
           "type": "Token",
           "optional": true,
@@ -109,6 +112,7 @@
     },
     "EnumCaseDeclaration": {
       "children": {
+        "Slot": "int",
         "Identifier": "IdentifierToken",
         "Argument": {
           "type": "EnumCaseArgument",
@@ -126,6 +130,7 @@
     "FunctionDefinition": {
       "extends": "Item",
       "children": {
+        "Slot": "int",
         "AccessModifier": {
           "type": "Token",
           "optional": true,

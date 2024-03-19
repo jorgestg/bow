@@ -3,9 +3,9 @@ using Bow.Compiler.Syntax;
 
 namespace Bow.Compiler.Binding;
 
-public sealed class ModuleSymbolBuilder(string name, CompilationUnitSyntax root)
+public sealed class ModuleSymbolBuilder(string name)
 {
-    private readonly CompilationUnitSyntax _root = root;
+    private CompilationUnitSyntax? _root;
 
     private ImmutableArray<CompilationUnitSyntax>.Builder? _lazyRoots;
 
@@ -21,6 +21,12 @@ public sealed class ModuleSymbolBuilder(string name, CompilationUnitSyntax root)
             return;
         }
 
+        if (_root == null)
+        {
+            _root = root;
+            return;
+        }
+
         if (_lazyRoots == null)
         {
             _lazyRoots = ImmutableArray.CreateBuilder<CompilationUnitSyntax>();
@@ -32,13 +38,39 @@ public sealed class ModuleSymbolBuilder(string name, CompilationUnitSyntax root)
 
     public ModuleSymbol ToModuleSymbol(Compilation compilation)
     {
-        var roots = _lazyRoots?.DrainToImmutable() ?? [_root];
+        ImmutableArray<CompilationUnitSyntax> roots;
+        if (_lazyRoots != null)
+        {
+            roots = _lazyRoots.DrainToImmutable();
+        }
+        else if (_root != null)
+        {
+            roots = [_root];
+        }
+        else
+        {
+            roots = [];
+        }
+
         return new ModuleSymbol(compilation, Name, roots, null, _lazySubModuleBuilders);
     }
 
     public ModuleSymbol ToModuleSymbol(ModuleSymbol container)
     {
-        var roots = _lazyRoots?.DrainToImmutable() ?? [_root];
+        ImmutableArray<CompilationUnitSyntax> roots;
+        if (_lazyRoots != null)
+        {
+            roots = _lazyRoots.DrainToImmutable();
+        }
+        else if (_root != null)
+        {
+            roots = [_root];
+        }
+        else
+        {
+            roots = [];
+        }
+
         return new ModuleSymbol(
             container.Compilation,
             Name,

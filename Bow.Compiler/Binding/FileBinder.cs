@@ -5,117 +5,121 @@ using Bow.Compiler.Syntax;
 
 namespace Bow.Compiler.Binding;
 
-internal sealed class FileBinder(ModuleSymbol module, SyntaxTree syntaxTree) : Binder(module.Binder)
+internal sealed class FileBinder(
+    ModuleSymbol module,
+    SyntaxTree syntaxTree,
+    DiagnosticBag diagnostics
+) : Binder(module.Binder)
 {
     private readonly ModuleSymbol _module = module;
+    private readonly DiagnosticBag _diagnostics = diagnostics;
 
     public SyntaxTree SyntaxTree { get; } = syntaxTree;
 
-    private FrozenDictionary<string, Symbol>? _lazySymbols;
-    private FrozenDictionary<string, Symbol> SymbolMap => _lazySymbols ??= CreateSymbolMap();
+    private FrozenDictionary<string, Symbol>? _lazyScope;
+    private FrozenDictionary<string, Symbol> Scope => _lazyScope ??= CreateScope();
 
     public override Symbol? Lookup(string name)
     {
-        return SymbolMap.TryGetValue(name, out var symbol) ? symbol : Parent.Lookup(name);
+        return Scope.TryGetValue(name, out var symbol) ? symbol : Parent.Lookup(name);
     }
 
-    public override TypeSymbol BindType(TypeReferenceSyntax syntax)
+    public override TypeSymbol BindType(TypeReferenceSyntax syntax, DiagnosticBag diagnostics)
     {
-        if (syntax is KeywordTypeReferenceSyntax keywordType)
+        switch (syntax)
         {
-            return keywordType.Keyword.Kind switch
+            case KeywordTypeReferenceSyntax keywordType:
             {
-                TokenKind.F32 => BuiltInModule.Float32,
-                TokenKind.F64 => BuiltInModule.Float64,
-                TokenKind.Never => BuiltInModule.Never,
-                TokenKind.S8 => BuiltInModule.Signed8,
-                TokenKind.S16 => BuiltInModule.Signed16,
-                TokenKind.S32 => BuiltInModule.Signed32,
-                TokenKind.S64 => BuiltInModule.Signed64,
-                TokenKind.Unit => BuiltInModule.Unit,
-                TokenKind.U8 => BuiltInModule.Unsigned8,
-                TokenKind.U16 => BuiltInModule.Unsigned16,
-                TokenKind.U32 => BuiltInModule.Unsigned32,
-                TokenKind.U64 => BuiltInModule.Unsigned64,
-                _ => throw new UnreachableException()
-            };
+                return keywordType.Keyword.Kind switch
+                {
+                    TokenKind.F32 => BuiltInModule.Float32,
+                    TokenKind.F64 => BuiltInModule.Float64,
+                    TokenKind.Never => BuiltInModule.Never,
+                    TokenKind.S8 => BuiltInModule.Signed8,
+                    TokenKind.S16 => BuiltInModule.Signed16,
+                    TokenKind.S32 => BuiltInModule.Signed32,
+                    TokenKind.S64 => BuiltInModule.Signed64,
+                    TokenKind.Unit => BuiltInModule.Unit,
+                    TokenKind.U8 => BuiltInModule.Unsigned8,
+                    TokenKind.U16 => BuiltInModule.Unsigned16,
+                    TokenKind.U32 => BuiltInModule.Unsigned32,
+                    TokenKind.U64 => BuiltInModule.Unsigned64,
+                    _ => throw new UnreachableException()
+                };
+            }
+
+            case PointerTypeReferenceSyntax pointerType:
+            {
+                var innerType = BindType(pointerType.Type, diagnostics);
+                return new PointerTypeSymbol(pointerType, innerType);
+            }
+
+            case NamedTypeReferenceSyntax namedType:
+            {
+                var symbol = BindName(namedType.Name, diagnostics);
+                if (symbol is TypeSymbol typeSymbol)
+                {
+                    return typeSymbol;
+                }
+
+                diagnostics.AddError(
+                    namedType.Name,
+                    DiagnosticMessages.NameIsNotAType,
+                    namedType.Name.ToString()
+                );
+
+                return new MissingTypeSymbol(namedType.Name);
+            }
+
+            case MissingTypeReferenceSyntax missingType:
+            {
+                // Diagnostic already reported
+                return new MissingTypeSymbol(missingType);
+            }
         }
 
-        if (syntax is PointerTypeReferenceSyntax pointerType)
-        {
-            return BindType(pointerType.Type);
-        }
-
-        var namedTypeSyntax = (NamedTypeReferenceSyntax)syntax;
-        var symbol = BindName(namedTypeSyntax.Name);
-        if (symbol is TypeSymbol typeSymbol)
-        {
-            return typeSymbol;
-        }
-
-        Diagnostics.AddError(
-            namedTypeSyntax.Name,
-            DiagnosticMessages.NameIsNotAType,
-            namedTypeSyntax.Name.ToString()
-        );
-
-        return new MissingTypeSymbol(namedTypeSyntax.Name);
+        throw new UnreachableException();
     }
 
-    public override Symbol BindName(NameSyntax syntax)
+    public override Symbol BindName(NameSyntax syntax, DiagnosticBag diagnostics)
     {
         Symbol? symbol = syntax switch
         {
-            SimpleNameSyntax s => BindSimpleName(s),
-            QualifiedNameSyntax s => BindQualifiedName(s),
+            SimpleNameSyntax s => BindSimpleName(s, diagnostics),
+            QualifiedNameSyntax s => BindQualifiedName(s, diagnostics),
             _ => throw new UnreachableException()
         };
 
-        return symbol ?? new MissingSymbol(syntax);
+        if (symbol == null)
+        {
+            return new MissingSymbol(syntax);
+        }
+
+        if (!IsAccessible(symbol))
+        {
+            diagnostics.AddError(syntax, DiagnosticMessages.SymbolIsNotAccessible, symbol.Name);
+        }
+
+        return symbol;
     }
 
-    private FrozenDictionary<string, Symbol> CreateSymbolMap()
+    private bool IsAccessible(Symbol symbol)
+    {
+        return symbol.Accessibility switch
+        {
+            SymbolAccessibility.Public => true,
+            SymbolAccessibility.Module => _module.RootModule == symbol.Module.RootModule,
+            SymbolAccessibility.File => SyntaxTree == symbol.Syntax.SyntaxTree,
+            _ => false
+        };
+    }
+
+    private FrozenDictionary<string, Symbol> CreateScope()
     {
         Dictionary<string, Symbol> symbols = [];
-
-        // Bind file-scoped symbols
-        foreach (var type in _module.Types)
-        {
-            var isAccessible =
-                type.Syntax.SyntaxTree == SyntaxTree
-                && type.Accessibility == SymbolAccessibility.File;
-
-            if (isAccessible && symbols.TryAdd(type.Name, type))
-            {
-                continue;
-            }
-
-            var identifier = ((ItemSyntax)type.Syntax).Identifier;
-            Diagnostics.AddError(identifier, DiagnosticMessages.NameIsAlreadyDefined, type.Name);
-        }
-
-        foreach (var function in _module.Functions)
-        {
-            var isAccessible =
-                function.Syntax.SyntaxTree == SyntaxTree
-                && function.Accessibility == SymbolAccessibility.File;
-
-            if (isAccessible && symbols.TryAdd(function.Name, function))
-            {
-                continue;
-            }
-
-            Diagnostics.AddError(
-                function.Syntax.Identifier,
-                DiagnosticMessages.NameIsAlreadyDefined,
-                function.Name
-            );
-        }
-
-        // Import use'd mods
         foreach (var useClause in SyntaxTree.Root.UseClauses)
         {
-            var symbol = BindName(useClause.Name);
+            var symbol = base.BindName(useClause.Name, _diagnostics);
             if (symbol.IsMissing)
             {
                 continue;
@@ -125,10 +129,10 @@ internal sealed class FileBinder(ModuleSymbol module, SyntaxTree syntaxTree) : B
             symbols.TryAdd(module.Name, module);
         }
 
-        return symbols.ToFrozenDictionary(StringComparer.Ordinal);
+        return symbols.ToFrozenDictionary();
     }
 
-    private Symbol? BindSimpleName(SimpleNameSyntax syntax)
+    private Symbol? BindSimpleName(SimpleNameSyntax syntax, DiagnosticBag diagnostics)
     {
         var name = syntax.Identifier.IdentifierText;
         var symbol = Lookup(name);
@@ -137,23 +141,23 @@ internal sealed class FileBinder(ModuleSymbol module, SyntaxTree syntaxTree) : B
             return symbol;
         }
 
-        Diagnostics.AddError(syntax, DiagnosticMessages.NameNotFound, name);
+        diagnostics.AddError(syntax, DiagnosticMessages.NameNotFound, name);
         return new MissingSymbol(syntax);
     }
 
-    private Symbol? BindQualifiedName(QualifiedNameSyntax syntax)
+    private Symbol? BindQualifiedName(QualifiedNameSyntax syntax, DiagnosticBag diagnostics)
     {
         var name = syntax.Parts[0].IdentifierText;
         var symbol = Lookup(name);
         if (symbol == null)
         {
-            Diagnostics.AddError(syntax.Parts[0], DiagnosticMessages.NameNotFound, name);
+            diagnostics.AddError(syntax.Parts[0], DiagnosticMessages.NameNotFound, name);
             return null;
         }
 
         if (symbol is not ModuleSymbol module)
         {
-            Diagnostics.AddError(syntax.Parts[0], DiagnosticMessages.NameIsNotAModule, name);
+            diagnostics.AddError(syntax.Parts[0], DiagnosticMessages.NameIsNotAModule, name);
             return null;
         }
 
@@ -170,14 +174,15 @@ internal sealed class FileBinder(ModuleSymbol module, SyntaxTree syntaxTree) : B
             var member = module.Binder.LookupMember(name);
             if (member != null)
             {
-                Diagnostics.AddError(syntax.Parts[i], DiagnosticMessages.NameIsNotAModule, name);
+                diagnostics.AddError(syntax.Parts[i], DiagnosticMessages.NameIsNotAModule, name);
                 return null;
             }
 
-            Diagnostics.AddError(syntax.Parts[i], DiagnosticMessages.NameNotFound, name);
+            diagnostics.AddError(syntax.Parts[i], DiagnosticMessages.NameNotFound, name);
             return null;
         }
 
+        name = syntax.Parts[^1].IdentifierText;
         return module.Binder.LookupMember(name);
     }
 }

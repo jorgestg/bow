@@ -8,11 +8,9 @@ internal abstract class Binder(Binder parent)
 {
     public Binder Parent { get; } = parent;
 
-    public virtual DiagnosticBag Diagnostics => Parent.Diagnostics;
-
     public static FileBinder GetFileBinder(IItemSymbol item)
     {
-        return item.Module.Binder.GetFileBinder(item.Syntax.SyntaxTree);
+        return item.Module.GetFileBinder(item.Syntax.SyntaxTree);
     }
 
     public virtual Symbol? Lookup(string name)
@@ -25,13 +23,13 @@ internal abstract class Binder(Binder parent)
         return null;
     }
 
-    public virtual Symbol BindName(NameSyntax syntax)
+    public virtual Symbol BindName(NameSyntax syntax, DiagnosticBag diagnostics)
     {
-        return Parent.BindName(syntax);
+        return Parent.BindName(syntax, diagnostics);
     }
 
-    public virtual TypeSymbol BindType(TypeReferenceSyntax syntax)
+    public virtual TypeSymbol BindType(TypeReferenceSyntax syntax, DiagnosticBag diagnostics)
     {
-        return Parent.BindType(syntax);
+        return Parent.BindType(syntax, diagnostics);
     }
 }

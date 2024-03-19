@@ -2,36 +2,25 @@ using Bow.Compiler.Diagnostics;
 
 namespace Bow.Compiler.Syntax;
 
-internal sealed class Parser
+internal sealed class Parser(SyntaxFactory syntaxFactory)
 {
-    private readonly SyntaxFactory _syntaxFactory;
-    private readonly DiagnosticBag _diagnostics;
+    private readonly SyntaxFactory _syntaxFactory = syntaxFactory;
+    private readonly Scanner _scanner = new(syntaxFactory);
+    private readonly DiagnosticBag _diagnostics = new();
 
-    private readonly Scanner _scanner;
-    private Token _previous;
-    private Token _current;
-    private Token _next;
-
-    public Parser(SyntaxFactory syntaxFactory)
-    {
-        _syntaxFactory = syntaxFactory;
-        _scanner = new Scanner(syntaxFactory);
-        _diagnostics = new DiagnosticBag();
-
-        _previous = null!;
-        _current = null!;
-        _next = null!;
-    }
+    private Token _current = null!;
 
     public Scanner Scanner => _scanner;
 
-    public DiagnosticBagView Diagnostics => _diagnostics.AsView();
+    public ImmutableArray<Diagnostic> GetDiagnostics()
+    {
+        return _diagnostics.ToImmutableArray();
+    }
 
     // compilation-unit = mod-clause? use-clause* item+
     public CompilationUnitSyntax ParseCompilationUnit()
     {
         _current = _scanner.NextToken();
-        _next = _scanner.NextToken();
 
         var modClause = _current.Kind == TokenKind.Mod ? ParseModClause() : null;
         var useClauses = ParseUseClauses();
@@ -153,6 +142,7 @@ internal sealed class Parser
     {
         var items = _syntaxFactory.SyntaxListBuilder<ItemSyntax>();
 
+        var slot = 0;
         Token? accessModifier = null;
         while (true)
         {
@@ -171,19 +161,19 @@ internal sealed class Parser
                     break;
 
                 case TokenKind.Enum:
-                    items.Add(ParseEnumDefinition(accessModifier));
+                    items.Add(ParseEnumDefinition(slot++, accessModifier));
                     MatchNewLine();
                     break;
 
                 case TokenKind.Fun:
-                    items.Add(ParseFunctionDefinition(accessModifier));
+                    items.Add(ParseFunctionDefinition(slot++, accessModifier));
                     MatchNewLine();
                     break;
 
                 case TokenKind.Struct:
                 case TokenKind.Identifier
                     when _current.ContextualKeywordKind == ContextualKeywordKind.Data:
-                    items.Add(ParseStructDefinition(accessModifier, Advance()));
+                    items.Add(ParseStructDefinition(slot++, accessModifier, Advance()));
                     MatchNewLine();
                     break;
 
@@ -198,7 +188,11 @@ internal sealed class Parser
     // struct-definition = item-access-modifier? struct-keyword ID '{' member-declarations? '}'
     // struct-keyword = 'struct' | 'data'
     // member-declarations = NL member-declaration (NL member-declaration)* NL
-    private StructDefinitionSyntax ParseStructDefinition(Token? accessModifier, Token keyword)
+    private StructDefinitionSyntax ParseStructDefinition(
+        int slot,
+        Token? accessModifier,
+        Token keyword
+    )
     {
         var identifier = MatchIdentifier();
         var openBrace = Match(TokenKind.OpenBrace);
@@ -207,6 +201,7 @@ internal sealed class Parser
         var (fields, methods) = ParseMemberDeclarations();
         var closeBrace = Match(TokenKind.CloseBrace);
         return _syntaxFactory.StructDefinition(
+            slot,
             accessModifier,
             keyword,
             identifier,
@@ -227,6 +222,7 @@ internal sealed class Parser
         var fields = _syntaxFactory.SyntaxListBuilder<FieldDeclarationSyntax>();
         var methods = _syntaxFactory.SyntaxListBuilder<FunctionDefinitionSyntax>();
 
+        var slot = 0;
         Token? accessModifier = null;
         while (true)
         {
@@ -249,12 +245,12 @@ internal sealed class Parser
 
                 case TokenKind.Mut:
                 case TokenKind.Identifier:
-                    fields.Add(ParseFieldDeclaration(accessModifier));
+                    fields.Add(ParseFieldDeclaration(slot++, accessModifier));
                     MatchNewLine();
                     continue;
 
                 case TokenKind.Fun:
-                    methods.Add(ParseFunctionDefinition(accessModifier));
+                    methods.Add(ParseFunctionDefinition(slot++, accessModifier));
                     MatchNewLine();
                     continue;
 
@@ -274,17 +270,23 @@ internal sealed class Parser
     }
 
     // field-declaration = member-access-modifier? 'mut'? ID type-reference
-    private FieldDeclarationSyntax ParseFieldDeclaration(Token? accessModifier)
+    private FieldDeclarationSyntax ParseFieldDeclaration(int slot, Token? accessModifier)
     {
         var mutableKeyword = _current.Kind == TokenKind.Mut ? Advance() : null;
         var identifier = MatchIdentifier();
         var type = ParseTypeReference();
-        return _syntaxFactory.FieldDeclaration(accessModifier, mutableKeyword, identifier, type);
+        return _syntaxFactory.FieldDeclaration(
+            slot,
+            accessModifier,
+            mutableKeyword,
+            identifier,
+            type
+        );
     }
 
     // enum-definition = item-access-modifier 'enum' ID '{' enum-member-declarations '}'
     // enum-member-declarations = NL enum-member-declaration (NL enum-member-declaration)* NL
-    private EnumDefinitionSyntax ParseEnumDefinition(Token? accessModifier)
+    private EnumDefinitionSyntax ParseEnumDefinition(int slot, Token? accessModifier)
     {
         var enumKeyword = Match(TokenKind.Enum);
         var identifier = MatchIdentifier();
@@ -292,6 +294,7 @@ internal sealed class Parser
         var (cases, methods) = ParseEnumMemberDeclarations();
         var closeBrace = Match(TokenKind.CloseBrace);
         return _syntaxFactory.EnumDefinition(
+            slot,
             accessModifier,
             enumKeyword,
             identifier,
@@ -311,6 +314,7 @@ internal sealed class Parser
         var cases = _syntaxFactory.SyntaxListBuilder<EnumCaseDeclarationSyntax>();
         var methods = _syntaxFactory.SyntaxListBuilder<FunctionDefinitionSyntax>();
 
+        var slot = 0;
         while (true)
         {
             switch (_current.Kind)
@@ -328,12 +332,12 @@ internal sealed class Parser
                 case TokenKind.Fun:
                 case TokenKind.Identifier
                     when _current.ContextualKeywordKind == ContextualKeywordKind.File:
-                    methods.Add(ParseFunctionDefinition(null));
+                    methods.Add(ParseFunctionDefinition(slot++, null));
                     MatchNewLine();
                     continue;
 
                 case TokenKind.Identifier:
-                    cases.Add(ParseEnumCaseDeclaration());
+                    cases.Add(ParseEnumCaseDeclaration(slot));
                     MatchNewLine();
                     continue;
 
@@ -353,18 +357,19 @@ internal sealed class Parser
     }
 
     // enum-case-declaration = ID ('(' type-reference ')')?
-    private EnumCaseDeclarationSyntax ParseEnumCaseDeclaration()
+    private EnumCaseDeclarationSyntax ParseEnumCaseDeclaration(int slot)
     {
         var identifier = MatchIdentifier();
         if (_current.Kind != TokenKind.OpenParenthesis)
         {
-            return _syntaxFactory.EnumCaseDeclaration(identifier, null);
+            return _syntaxFactory.EnumCaseDeclaration(slot, identifier, null);
         }
 
         var openParenthesis = Match(TokenKind.OpenParenthesis);
         var type = ParseTypeReference();
         var closeParenthesis = Match(TokenKind.CloseParenthesis);
         return _syntaxFactory.EnumCaseDeclaration(
+            slot,
             identifier,
             _syntaxFactory.EnumCaseArgument(openParenthesis, type, closeParenthesis)
         );
@@ -373,7 +378,7 @@ internal sealed class Parser
     // method-definition = member-access-modifier? function-definition
     // function-item-definition = item-access-modifier? function-declaration
     // function-definition = 'fun' ID '(' parameter-declarations? ')' type-reference? block
-    private FunctionDefinitionSyntax ParseFunctionDefinition(Token? accessModifier)
+    private FunctionDefinitionSyntax ParseFunctionDefinition(int slot, Token? accessModifier)
     {
         var funKeyword = Match(TokenKind.Fun);
         var identifier = MatchIdentifier();
@@ -382,6 +387,7 @@ internal sealed class Parser
         var closeParenthesis = Match(TokenKind.CloseParenthesis);
         var returnType = _current.Kind != TokenKind.OpenBrace ? ParseTypeReference() : null;
         return _syntaxFactory.FunctionDefinition(
+            slot,
             accessModifier,
             funKeyword,
             identifier,
@@ -458,10 +464,9 @@ internal sealed class Parser
 
     private Token Advance()
     {
-        _previous = _current;
-        _current = _next;
-        _next = _scanner.NextToken();
-        return _previous;
+        var previous = _current;
+        _current = _scanner.NextToken();
+        return previous;
     }
 
     private Token Match(TokenKind kind)
