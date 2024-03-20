@@ -162,15 +162,16 @@
         "Type": { "type": "TypeReference", "optional": true }
       }
     },
+    "Statement": {
+      "abstract": true
+    },
     "Block": {
+      "extends": "Statement",
       "children": {
         "OpenBrace": "Token",
         "Statements": { "type": "Statement", "array": true },
         "CloseBrace": "Token"
       }
-    },
-    "Statement": {
-      "abstract": true
     },
     "ExpressionStatement": {
       "extends": "Statement",
@@ -182,7 +183,7 @@
       "extends": "Statement",
       "children": {
         "Keyword": "Token",
-        "Value": "Expression"
+        "Expression": { "type": "Expression", "optional": true }
       }
     },
     "Expression": {
@@ -191,7 +192,7 @@
     "LiteralExpression": {
       "extends": "Expression",
       "children": {
-        "Value": "Token"
+        "Literal": "Token"
       }
     }
   }
