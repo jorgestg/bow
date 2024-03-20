@@ -29,7 +29,7 @@ public sealed class ModuleSymbol : Symbol
     public override ModuleSymbol Module => this;
 
     private ModuleBinder? _lazyBinder;
-    internal override ModuleBinder Binder => _lazyBinder ??= new(this);
+    internal ModuleBinder Binder => _lazyBinder ??= new(this);
 
     private ImmutableArray<FileBinder> _lazyFileBinders;
     internal ImmutableArray<FileBinder> FileBinders =>
@@ -81,7 +81,8 @@ public sealed class ModuleSymbol : Symbol
         var fileBinders = ImmutableArray.CreateBuilder<FileBinder>(Roots.Length);
         foreach (var root in Roots)
         {
-            fileBinders.Add(new FileBinder(this, root.SyntaxTree, _diagnosticBag));
+            var fileBinder = FileBinder.CreateAndBindImports(this, root.SyntaxTree, _diagnosticBag);
+            fileBinders.Add(fileBinder);
         }
 
         return fileBinders.MoveToImmutable();

@@ -8,15 +8,18 @@ public enum TokenKind
     NewLine,
 
     // Keywords
+    Enum,
+    False,
+
     F32,
     F64,
 
-    Enum,
     Fun,
     Mod,
     Mut,
     Never,
     Pub,
+    Return,
 
     S8,
     S16,
@@ -25,6 +28,7 @@ public enum TokenKind
 
     Self,
     Struct,
+    True,
 
     U8,
     U16,
@@ -58,11 +62,12 @@ public enum ContextualKeywordKind
     Type
 }
 
-public class Token(SyntaxTree syntaxTree, TokenKind kind, Location location)
+public class Token(SyntaxTree syntaxTree, TokenKind kind, Location location, bool isMissing)
     : SyntaxNode(syntaxTree)
 {
     public TokenKind Kind { get; } = kind;
     public override Location Location { get; } = location;
+    public override bool IsMissing { get; } = isMissing;
 
     public ContextualKeywordKind ContextualKeywordKind
     {
@@ -86,8 +91,8 @@ public class Token(SyntaxTree syntaxTree, TokenKind kind, Location location)
 
 public sealed class IdentifierToken : Token
 {
-    public IdentifierToken(SyntaxTree syntaxTree, Location location)
-        : base(syntaxTree, TokenKind.Identifier, location)
+    public IdentifierToken(SyntaxTree syntaxTree, Location location, bool isMissing)
+        : base(syntaxTree, TokenKind.Identifier, location, isMissing)
     {
         IdentifierText = ToString();
     }

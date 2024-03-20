@@ -15,4 +15,9 @@ internal static class DiagnosticMessages
 
     public const string SelfParameterCannotHaveAType =
         "'self' parameters on methods cannot be type-annotated.";
+
+    public const string ExpressionExpected = "Expression expected.";
+
+    public const string BraceShouldGoOnTheSameLine =
+        "'{' should go on the same line as the declaration.";
 }

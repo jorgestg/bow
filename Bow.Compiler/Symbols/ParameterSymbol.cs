@@ -1,4 +1,3 @@
-using Bow.Compiler.Binding;
 using Bow.Compiler.Syntax;
 
 namespace Bow.Compiler.Symbols;
@@ -6,7 +5,6 @@ namespace Bow.Compiler.Symbols;
 public abstract class ParameterSymbol(FunctionSymbol function, TypeSymbol type) : Symbol
 {
     public abstract override ParameterDeclarationSyntax Syntax { get; }
-    internal override Binder Binder => Function.Binder;
     public override ModuleSymbol Module => Function.Module;
 
     public FunctionSymbol Function { get; } = function;

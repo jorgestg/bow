@@ -18,7 +18,7 @@ public sealed class MethodSymbol(
     public override ModuleSymbol Module => Container.Module;
 
     private FunctionBinder? _lazyBinder;
-    internal override FunctionBinder Binder => _lazyBinder ??= new(this);
+    internal FunctionBinder Binder => _lazyBinder ??= new(this);
 
     public override SymbolAccessibility Accessibility
     {

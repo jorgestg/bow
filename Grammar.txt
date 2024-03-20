@@ -31,7 +31,14 @@ function-item-definition = item-access-modifier? function-declaration
 function-definition = 'fun' ID '(' parameter-declarations? ')' type-reference? block
 parameter-declarations = parameter-declaration ((',' parameter-declaration)+ ','?)? 
 parameter-declaration = 'mut'? (ID type-reference | '*'? 'self')
-block = '{' '}'
+block = '{' (statements NL)? '}'
+
+statements = statement (NL statement)*
+statement = return-expression
+return-statement = 'return' expression
+
+expression = literal
+literal = 'true' | 'false'
 
 NL = '\n'
 STRING = '"' .* '"'

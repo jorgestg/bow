@@ -1,4 +1,3 @@
-using Bow.Compiler.Binding;
 using Bow.Compiler.Syntax;
 
 namespace Bow.Compiler.Symbols;
@@ -12,7 +11,6 @@ public sealed class EnumCaseSymbol(
     public override string Name => Syntax.Identifier.IdentifierText;
     public override EnumCaseDeclarationSyntax Syntax { get; } = syntax;
     public override ModuleSymbol Module => Enum.Module;
-    internal override Binder Binder => Enum.Binder;
     public override SymbolAccessibility Accessibility => SymbolAccessibility.Public;
 
     public EnumSymbol Enum { get; } = @enum;

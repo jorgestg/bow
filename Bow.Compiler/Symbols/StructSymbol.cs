@@ -1,5 +1,4 @@
 using System.Collections.Frozen;
-using Bow.Compiler.Binding;
 using Bow.Compiler.Diagnostics;
 using Bow.Compiler.Syntax;
 
@@ -13,14 +12,11 @@ public sealed class StructSymbol(ModuleSymbol module, StructDefinitionSyntax syn
 
     public override string Name => Syntax.Identifier.IdentifierText;
 
-    public override SymbolAccessibility Accessibility =>
-        SymbolFacts.GetAccessibilityFromToken(Syntax.AccessModifier, SymbolAccessibility.File);
-
     public override StructDefinitionSyntax Syntax { get; } = syntax;
     public override ModuleSymbol Module { get; } = module;
 
-    private StructBinder? _lazyBinder;
-    internal override StructBinder Binder => _lazyBinder ??= new(this);
+    public override SymbolAccessibility Accessibility =>
+        SymbolFacts.GetAccessibilityFromToken(Syntax.AccessModifier, SymbolAccessibility.File);
 
     public bool IsData => Syntax.Keyword.ContextualKeywordKind == ContextualKeywordKind.Data;
 
@@ -46,9 +42,10 @@ public sealed class StructSymbol(ModuleSymbol module, StructDefinitionSyntax syn
     private ImmutableArray<FieldSymbol> CreateFields()
     {
         var builder = ImmutableArray.CreateBuilder<FieldSymbol>(Syntax.Fields.Count);
+        var binder = Module.GetFileBinder(Syntax.SyntaxTree);
         foreach (var syntax in Syntax.Fields)
         {
-            var type = Binder.BindType(syntax.Type, _diagnosticBag);
+            var type = binder.BindType(syntax.Type, _diagnosticBag);
             FieldSymbol field = new(this, syntax, type);
             builder.Add(field);
         }
@@ -59,12 +56,13 @@ public sealed class StructSymbol(ModuleSymbol module, StructDefinitionSyntax syn
     private ImmutableArray<MethodSymbol> CreateMethods()
     {
         var builder = ImmutableArray.CreateBuilder<MethodSymbol>(Syntax.Methods.Count);
+        var binder = Module.GetFileBinder(Syntax.SyntaxTree);
         foreach (var syntax in Syntax.Methods)
         {
             var returnType =
                 syntax.ReturnType == null
                     ? BuiltInModule.Unit
-                    : Binder.BindType(syntax.ReturnType, _diagnosticBag);
+                    : binder.BindType(syntax.ReturnType, _diagnosticBag);
 
             MethodSymbol method = new(this, syntax, returnType);
             builder.Add(method);

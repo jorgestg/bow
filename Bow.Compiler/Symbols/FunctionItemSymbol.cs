@@ -16,7 +16,7 @@ public sealed class FunctionItemSymbol(ModuleSymbol module, FunctionDefinitionSy
     public override ModuleSymbol Module { get; } = module;
 
     private FunctionBinder? _lazyBinder;
-    internal override FunctionBinder Binder => _lazyBinder ??= new(this);
+    internal FunctionBinder Binder => _lazyBinder ??= new(this);
 
     public override SymbolAccessibility Accessibility =>
         SymbolFacts.GetAccessibilityFromToken(Syntax.AccessModifier, SymbolAccessibility.File);

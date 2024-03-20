@@ -13,13 +13,24 @@ internal sealed class FunctionBinder(FunctionSymbol function) : Binder(GetParent
             : Parent.Lookup(name);
     }
 
-    private static Binder GetParentBinder(FunctionSymbol function)
+    private static FileBinder GetParentBinder(FunctionSymbol function)
     {
-        return function switch
+        switch (function)
         {
-            FunctionItemSymbol i => GetFileBinder(i),
-            MethodSymbol m => m.Container.Binder,
-            _ => throw new UnreachableException()
-        };
+            case FunctionItemSymbol i:
+                return GetFileBinder(i);
+
+            case MethodSymbol m:
+            {
+                return m.Container switch
+                {
+                    EnumSymbol e => GetFileBinder(e),
+                    StructSymbol s => GetFileBinder(s),
+                    _ => throw new UnreachableException()
+                };
+            }
+        }
+
+        throw new UnreachableException();
     }
 }

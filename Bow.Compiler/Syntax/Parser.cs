@@ -232,10 +232,6 @@ internal sealed class Parser(SyntaxFactory syntaxFactory)
                 case TokenKind.CloseBrace:
                     break;
 
-                case TokenKind.NewLine:
-                    Advance();
-                    continue;
-
                 case TokenKind.Pub:
                 case TokenKind.Mod:
                 case TokenKind.Identifier
@@ -323,10 +319,6 @@ internal sealed class Parser(SyntaxFactory syntaxFactory)
                 case TokenKind.CloseBrace:
                     break;
 
-                case TokenKind.NewLine:
-                    Advance();
-                    continue;
-
                 case TokenKind.Pub:
                 case TokenKind.Mod:
                 case TokenKind.Fun:
@@ -385,7 +377,8 @@ internal sealed class Parser(SyntaxFactory syntaxFactory)
         var openParenthesis = Match(TokenKind.OpenParenthesis);
         var parameters = ParseParameterDeclarations();
         var closeParenthesis = Match(TokenKind.CloseParenthesis);
-        var returnType = _current.Kind != TokenKind.OpenBrace ? ParseTypeReference() : null;
+        var returnType = IsTypeReferenceStart() ? ParseTypeReference() : null;
+        var block = ParseBlock();
         return _syntaxFactory.FunctionDefinition(
             slot,
             accessModifier,
@@ -394,7 +387,8 @@ internal sealed class Parser(SyntaxFactory syntaxFactory)
             openParenthesis,
             parameters,
             closeParenthesis,
-            returnType
+            returnType,
+            block
         );
     }
 
@@ -410,10 +404,6 @@ internal sealed class Parser(SyntaxFactory syntaxFactory)
                 case TokenKind.CloseParenthesis:
                 case TokenKind.OpenBrace:
                     return parameters.ToSyntaxList();
-
-                case TokenKind.NewLine:
-                    Advance();
-                    continue;
 
                 default:
                     parameters.Add(ParseParameterDeclaration());
@@ -462,6 +452,108 @@ internal sealed class Parser(SyntaxFactory syntaxFactory)
         return _syntaxFactory.SimpleParameterDeclaration(mutableKeyword, identifier, type);
     }
 
+    // block = '{' (statements NL)? '}'
+    private BlockSyntax ParseBlock()
+    {
+        if (_current.Kind == TokenKind.NewLine)
+        {
+            _diagnostics.AddError(_current, DiagnosticMessages.BraceShouldGoOnTheSameLine);
+            Advance();
+        }
+
+        var openBrace = Match(TokenKind.OpenBrace);
+        if (_current.Kind == TokenKind.CloseBrace)
+        {
+            return _syntaxFactory.Block(
+                openBrace,
+                _syntaxFactory.SyntaxList<StatementSyntax>(),
+                Match(TokenKind.CloseBrace)
+            );
+        }
+
+        MatchNewLine();
+
+        var statements = ParseStatements();
+        var closeBrace = Match(TokenKind.CloseBrace);
+        return _syntaxFactory.Block(openBrace, statements, closeBrace);
+    }
+
+    // statements = statement (NL statement)*
+    private SyntaxList<StatementSyntax> ParseStatements()
+    {
+        var statements = _syntaxFactory.SyntaxListBuilder<StatementSyntax>();
+
+        while (true)
+        {
+            switch (_current.Kind)
+            {
+                case TokenKind.EndOfFile:
+                case TokenKind.CloseBrace:
+                    return statements.ToSyntaxList();
+
+                default:
+                {
+                    var startToken = _current;
+                    statements.Add(ParseStatement());
+                    MatchNewLine();
+
+                    // If ParseStatement() did not consume any tokens,
+                    // we need to skip the current token and continue
+                    // in order to avoid an infinite loop.
+                    if (_current == startToken)
+                    {
+                        Advance();
+                    }
+
+                    continue;
+                }
+            }
+        }
+    }
+
+    // statement = return-expression
+    private StatementSyntax ParseStatement()
+    {
+        switch (_current.Kind)
+        {
+            case TokenKind.Return:
+                return ParseReturnStatement();
+
+            default:
+                var expression = ParseExpression();
+                return _syntaxFactory.ExpressionStatement(expression);
+        }
+    }
+
+    // return-statement = 'return' expression
+    private ReturnStatementSyntax ParseReturnStatement()
+    {
+        var returnKeyword = Match(TokenKind.Return);
+        var expression = ParseExpression();
+        return _syntaxFactory.ReturnStatement(returnKeyword, expression);
+    }
+
+    // expression = literal
+    private ExpressionSyntax ParseExpression()
+    {
+        return ParseLiteral();
+    }
+
+    // literal = 'true' | 'false'
+    private ExpressionSyntax ParseLiteral()
+    {
+        switch (_current.Kind)
+        {
+            case TokenKind.True:
+            case TokenKind.False:
+                return _syntaxFactory.LiteralExpression(Advance());
+
+            default:
+                _diagnostics.AddError(_current, DiagnosticMessages.ExpressionExpected);
+                return _syntaxFactory.MissingExpression(_current);
+        }
+    }
+
     private Token Advance()
     {
         var previous = _current;
@@ -483,7 +575,7 @@ internal sealed class Parser(SyntaxFactory syntaxFactory)
             _current.ToString()
         );
 
-        return _syntaxFactory.Token(kind, _current.Location.Start, _current.Location.Length);
+        return _syntaxFactory.MissingToken(kind, _current.Location.Start, _current.Location.Length);
     }
 
     private IdentifierToken MatchIdentifier()
@@ -500,7 +592,7 @@ internal sealed class Parser(SyntaxFactory syntaxFactory)
             _current.ToString()
         );
 
-        return _syntaxFactory.Identifier(_current.Location.Start, _current.Location.Length);
+        return _syntaxFactory.MissingIdentifier(_current.Location.Start, _current.Location.Length);
     }
 
     private Token MatchNewLine()
@@ -517,7 +609,7 @@ internal sealed class Parser(SyntaxFactory syntaxFactory)
             _current.ToString()
         );
 
-        return _syntaxFactory.Token(
+        return _syntaxFactory.MissingToken(
             TokenKind.NewLine,
             _current.Location.Start,
             _current.Location.Length

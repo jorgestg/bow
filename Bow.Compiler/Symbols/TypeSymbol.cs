@@ -1,4 +1,3 @@
-using Bow.Compiler.Binding;
 using Bow.Compiler.Syntax;
 
 namespace Bow.Compiler.Symbols;
@@ -31,7 +30,6 @@ public sealed class MissingTypeSymbol(SyntaxNode syntax) : TypeSymbol
     public override string Name => "???";
     public override SyntaxNode Syntax { get; } = syntax;
     public override ModuleSymbol Module => throw new InvalidOperationException();
-    internal override Binder Binder => throw new InvalidOperationException();
     public override bool IsMissing => true;
 }
 
@@ -40,6 +38,5 @@ public sealed class PointerTypeSymbol(SyntaxNode syntax, TypeSymbol type) : Type
     public override string Name { get; } = '*' + type.Name;
     public override SyntaxNode Syntax { get; } = syntax;
     public override ModuleSymbol Module => throw new InvalidOperationException();
-    internal override Binder Binder => throw new InvalidOperationException();
     public TypeSymbol Type { get; } = type;
 }

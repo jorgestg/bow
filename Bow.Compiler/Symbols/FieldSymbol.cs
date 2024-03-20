@@ -1,4 +1,3 @@
-using Bow.Compiler.Binding;
 using Bow.Compiler.Syntax;
 
 namespace Bow.Compiler.Symbols;
@@ -25,7 +24,6 @@ public sealed class FieldSymbol(
 
     public override FieldDeclarationSyntax Syntax { get; } = syntax;
     public override ModuleSymbol Module => Struct.Module;
-    internal override Binder Binder => Struct.Binder;
 
     public StructSymbol Struct { get; } = @struct;
     public bool IsMutable => Syntax.MutKeyword != null;

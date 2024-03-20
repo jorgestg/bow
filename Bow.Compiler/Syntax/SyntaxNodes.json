@@ -54,12 +54,6 @@
         "Type": "TypeReference"
       }
     },
-    "MissingTypeReference": {
-      "extends": "TypeReference",
-      "children": {
-        "Found": "Token"
-      }
-    },
     "Item": {
       "abstract": true,
       "children": {
@@ -141,7 +135,8 @@
         "OpenParenthesis": "Token",
         "Parameters": { "type": "ParameterDeclaration", "array": true },
         "CloseParenthesis": "Token",
-        "ReturnType": { "type": "TypeReference", "optional": true }
+        "ReturnType": { "type": "TypeReference", "optional": true },
+        "Body": "Block"
       }
     },
     "ParameterDeclaration": {
@@ -165,6 +160,38 @@
         "Star": { "type": "Token", "optional": true },
         "Keyword": "Token",
         "Type": { "type": "TypeReference", "optional": true }
+      }
+    },
+    "Block": {
+      "children": {
+        "OpenBrace": "Token",
+        "Statements": { "type": "Statement", "array": true },
+        "CloseBrace": "Token"
+      }
+    },
+    "Statement": {
+      "abstract": true
+    },
+    "ExpressionStatement": {
+      "extends": "Statement",
+      "children": {
+        "Expression": "Expression"
+      }
+    },
+    "ReturnStatement": {
+      "extends": "Statement",
+      "children": {
+        "Keyword": "Token",
+        "Value": "Expression"
+      }
+    },
+    "Expression": {
+      "abstract": true
+    },
+    "LiteralExpression": {
+      "extends": "Expression",
+      "children": {
+        "Value": "Token"
       }
     }
   }

@@ -5,23 +5,50 @@ using Bow.Compiler.Syntax;
 
 namespace Bow.Compiler.Binding;
 
-internal sealed class FileBinder(
-    ModuleSymbol module,
-    SyntaxTree syntaxTree,
-    DiagnosticBag diagnostics
-) : Binder(module.Binder)
+internal sealed class FileBinder : Binder
 {
-    private readonly ModuleSymbol _module = module;
-    private readonly DiagnosticBag _diagnostics = diagnostics;
+    private readonly ModuleSymbol _module;
+    private readonly FrozenDictionary<string, Symbol> _symbols;
 
-    public SyntaxTree SyntaxTree { get; } = syntaxTree;
+    private FileBinder(
+        ModuleSymbol module,
+        SyntaxTree syntaxTree,
+        FrozenDictionary<string, Symbol> symbols
+    )
+        : base(module.Binder)
+    {
+        _module = module;
+        _symbols = symbols;
 
-    private FrozenDictionary<string, Symbol>? _lazyScope;
-    private FrozenDictionary<string, Symbol> Scope => _lazyScope ??= CreateScope();
+        SyntaxTree = syntaxTree;
+    }
+
+    public SyntaxTree SyntaxTree { get; }
+
+    public static FileBinder CreateAndBindImports(
+        ModuleSymbol module,
+        SyntaxTree syntaxTree,
+        DiagnosticBag diagnostics
+    )
+    {
+        Dictionary<string, Symbol> symbols = [];
+        foreach (var useClause in syntaxTree.Root.UseClauses)
+        {
+            var symbol = module.Binder.BindName(useClause.Name, diagnostics);
+            if (symbol.IsMissing)
+            {
+                continue;
+            }
+
+            symbols.TryAdd(module.Name, symbol);
+        }
+
+        return new FileBinder(module, syntaxTree, symbols.ToFrozenDictionary());
+    }
 
     public override Symbol? Lookup(string name)
     {
-        return Scope.TryGetValue(name, out var symbol) ? symbol : Parent.Lookup(name);
+        return _symbols.TryGetValue(name, out var symbol) ? symbol : Parent.Lookup(name);
     }
 
     public override TypeSymbol BindType(TypeReferenceSyntax syntax, DiagnosticBag diagnostics)
@@ -112,24 +139,6 @@ internal sealed class FileBinder(
             SymbolAccessibility.File => SyntaxTree == symbol.Syntax.SyntaxTree,
             _ => false
         };
-    }
-
-    private FrozenDictionary<string, Symbol> CreateScope()
-    {
-        Dictionary<string, Symbol> symbols = [];
-        foreach (var useClause in SyntaxTree.Root.UseClauses)
-        {
-            var symbol = base.BindName(useClause.Name, _diagnostics);
-            if (symbol.IsMissing)
-            {
-                continue;
-            }
-
-            var module = (ModuleSymbol)symbol;
-            symbols.TryAdd(module.Name, module);
-        }
-
-        return symbols.ToFrozenDictionary();
     }
 
     private Symbol? BindSimpleName(SimpleNameSyntax syntax, DiagnosticBag diagnostics)

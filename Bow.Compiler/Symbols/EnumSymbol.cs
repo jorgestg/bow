@@ -1,5 +1,4 @@
 using System.Collections.Frozen;
-using Bow.Compiler.Binding;
 using Bow.Compiler.Diagnostics;
 using Bow.Compiler.Syntax;
 
@@ -14,9 +13,6 @@ public sealed class EnumSymbol(ModuleSymbol module, EnumDefinitionSyntax syntax)
     public override string Name => Syntax.Identifier.IdentifierText;
     public override EnumDefinitionSyntax Syntax { get; } = syntax;
     public override ModuleSymbol Module { get; } = module;
-
-    private EnumBinder? _lazyBinder;
-    internal override EnumBinder Binder => _lazyBinder ??= new(this);
 
     public override SymbolAccessibility Accessibility =>
         SymbolFacts.GetAccessibilityFromToken(Syntax.AccessModifier, SymbolAccessibility.File);
@@ -43,12 +39,13 @@ public sealed class EnumSymbol(ModuleSymbol module, EnumDefinitionSyntax syntax)
     private ImmutableArray<EnumCaseSymbol> CreateCases()
     {
         var builder = ImmutableArray.CreateBuilder<EnumCaseSymbol>(Syntax.Cases.Count);
+        var binder = Module.GetFileBinder(Syntax.SyntaxTree);
         foreach (var syntax in Syntax.Cases)
         {
             var argumentType =
                 syntax.Argument == null
                     ? null
-                    : Binder.BindType(syntax.Argument.TypeReference, _diagnosticBag);
+                    : binder.BindType(syntax.Argument.TypeReference, _diagnosticBag);
 
             EnumCaseSymbol @case = new(this, syntax, argumentType);
             builder.Add(@case);
@@ -60,12 +57,13 @@ public sealed class EnumSymbol(ModuleSymbol module, EnumDefinitionSyntax syntax)
     private ImmutableArray<MethodSymbol> CreateMethods()
     {
         var builder = ImmutableArray.CreateBuilder<MethodSymbol>(Syntax.Methods.Count);
+        var binder = Module.GetFileBinder(Syntax.SyntaxTree);
         foreach (var syntax in Syntax.Methods)
         {
             var returnType =
                 syntax.ReturnType == null
                     ? BuiltInModule.Unit
-                    : Binder.BindType(syntax.ReturnType, _diagnosticBag);
+                    : binder.BindType(syntax.ReturnType, _diagnosticBag);
 
             MethodSymbol method = new(this, syntax, returnType);
             builder.Add(method);
