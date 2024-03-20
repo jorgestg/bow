@@ -40,7 +40,7 @@ internal sealed class FileBinder : Binder
                 continue;
             }
 
-            symbols.TryAdd(module.Name, symbol);
+            symbols.TryAdd(symbol.Name, symbol);
         }
 
         return new FileBinder(module, syntaxTree, symbols.ToFrozenDictionary());
