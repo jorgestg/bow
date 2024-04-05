@@ -1,4 +1,3 @@
-using Bow.Compiler;
 using Bow.Compiler.Binding;
 using Bow.Compiler.Symbols;
 using Bow.Compiler.Syntax;
@@ -16,7 +15,7 @@ public class FileBinderTests
             """
             mod points
 
-            file struct Point {
+            struct Point {
                 x s32
                 y s32
             }
@@ -33,16 +32,16 @@ public class FileBinderTests
             """
         );
 
-        Compilation compilation = new([file1, file2]);
+        PackageSymbol package = new("main", [file1, file2]);
 
         // Act
-        ModuleSymbol points = compilation.Modules.FindByName("points")!;
+        ModuleSymbol points = package.Modules.FindByName("points")!;
         TypeSymbol point = points.Types.FindByName("Point")!;
-        FunctionItemSymbol doSomethingWithPoint = points.Functions.FindByName("foo")!;
+        FunctionItemSymbol foo = points.Functions.FindByName("foo")!;
 
         // Assert
-        Assert.Same(point, doSomethingWithPoint.ReturnType);
-        Assert.Single(doSomethingWithPoint.Diagnostics);
+        Assert.Same(point, foo.ReturnType);
+        Assert.Single(foo.Diagnostics);
     }
 
     [Fact]
@@ -50,9 +49,9 @@ public class FileBinderTests
     {
         // Arrange
         var file1 = SyntaxTree.Create(
-            "mod1.bow",
+            "points.bow",
             """
-            mod math.points
+            mod points
 
             pub struct Point {
                 x s32
@@ -62,26 +61,25 @@ public class FileBinderTests
         );
 
         var file2 = SyntaxTree.Create(
-            "mod2.bow",
+            "main.bow",
             """
-            use math.points
+            use points
 
             fun foo() points.Point {
             }
             """
         );
 
-        Compilation compilation = new([file1, file2]);
+        PackageSymbol package = new("main", [file1, file2]);
 
         // Act
-        ModuleSymbol main = compilation.Modules.FindByName("main")!;
-        FunctionItemSymbol doSomethingWithPoint = main.Functions.FindByName("foo")!;
+        ModuleSymbol main = package.Modules.FindByName("main")!;
+        FunctionItemSymbol foo = main.Functions.FindByName("foo")!;
 
-        ModuleSymbol math = compilation.Modules.FindByName("math")!;
-        ModuleSymbol points = math.SubModules.FindByName("points")!;
+        ModuleSymbol points = package.Modules.FindByName("points")!;
         TypeSymbol point = points.Types.FindByName("Point")!;
 
         // Assert
-        Assert.Same(point, doSomethingWithPoint.ReturnType);
+        Assert.Same(point, foo.ReturnType);
     }
 }

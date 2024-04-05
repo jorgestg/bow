@@ -4,6 +4,8 @@ namespace Bow.Compiler.Symbols;
 
 public static class SymbolFacts
 {
+    public const string DefaultModuleName = "main";
+
     public static SymbolAccessibility GetAccessibilityFromToken(
         Token? token,
         SymbolAccessibility defaultVisibility

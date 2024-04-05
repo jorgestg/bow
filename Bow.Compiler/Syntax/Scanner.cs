@@ -121,6 +121,7 @@ internal sealed class Scanner(SyntaxFactory syntaxFactory)
             "mod" => CreateToken(TokenKind.Mod),
             "mut" => CreateToken(TokenKind.Mut),
             "never" => CreateToken(TokenKind.Never),
+            "pkg" => CreateToken(TokenKind.Pkg),
             "pub" => CreateToken(TokenKind.Pub),
             "return" => CreateToken(TokenKind.Return),
             "s8" => CreateToken(TokenKind.S8),

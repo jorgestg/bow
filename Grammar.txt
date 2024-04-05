@@ -1,6 +1,6 @@
 compilation-unit = mod-clause? use-clause* item+
-mod-clause = 'mod' name NL
-use-clause = 'use' name NL
+mod-clause = 'mod' ID NL
+use-clause = 'use' ID '.' ID NL
 
 name = ID | qualified-name
 qualified-name = ID ('.' ID)+
@@ -9,8 +9,8 @@ type-reference = name | keyword-type-reference | pointer-type-reference
 keyword-type-reference = 'f32' | 'f64' | 'never' | 's8' | 's16' | 's32' | 's64' | 'u8' | 'u16' | 'u32' | 'u64' | 'unit'
 pointer-type-reference = '*' type-reference
 
-item-access-modifier = 'pub' | 'mod'
-member-access-modifier = 'pub' | 'file' | 'mod'
+item-access-modifier = 'pub' | 'pkg' | 'mod'
+member-access-modifier = 'pub' | 'pkg' | 'mod' | 'file'
 
 item = struct-definition | enum-definition | function-definition
 

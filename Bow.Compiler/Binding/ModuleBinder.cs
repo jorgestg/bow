@@ -5,7 +5,7 @@ using Bow.Compiler.Syntax;
 namespace Bow.Compiler.Binding;
 
 internal sealed class ModuleBinder(ModuleSymbol module)
-    : Binder((Binder?)module.Previous?.Binder ?? module.Compilation.Binder)
+    : Binder((Binder?)module.Previous?.Binder ?? module.Package.Binder)
 {
     private readonly ModuleSymbol _module = module;
 
@@ -47,40 +47,31 @@ internal sealed class ModuleBinder(ModuleSymbol module)
     private ModuleSymbol? BindQualifiedName(QualifiedNameSyntax syntax, DiagnosticBag diagnostics)
     {
         var name = syntax.Parts[0].IdentifierText;
-        var symbol = Lookup(name);
-        if (symbol == null)
+        var left = Lookup(name);
+        if (left == null)
         {
             diagnostics.AddError(syntax.Parts[0], DiagnosticMessages.NameNotFound, name);
             return null;
         }
 
-        if (symbol is not ModuleSymbol module)
+        if (left is not PackageSymbol package)
         {
-            diagnostics.AddError(syntax.Parts[0], DiagnosticMessages.NameIsNotAModule, name);
+            diagnostics.AddError(syntax.Parts[0], DiagnosticMessages.NameIsNotAPackage, name);
             return null;
         }
 
-        for (var i = 1; i < syntax.Parts.Count; i++)
+        var right = package.Modules.FindByName(syntax.Parts[1].IdentifierText);
+        if (syntax.Parts.Count == 2)
         {
-            name = syntax.Parts[i].IdentifierText;
-            var subModule = module.SubModules.FindByName(name);
-            if (subModule != null)
-            {
-                module = subModule;
-                continue;
-            }
-
-            var member = module.Binder.LookupMember(name);
-            if (member != null)
-            {
-                diagnostics.AddError(syntax.Parts[i], DiagnosticMessages.NameIsNotAModule, name);
-                return null;
-            }
-
-            diagnostics.AddError(syntax.Parts[i], DiagnosticMessages.NameNotFound, name);
-            return null;
+            return right;
         }
 
-        return module;
+        diagnostics.AddError(
+            syntax.Parts[2],
+            DiagnosticMessages.NameIsNotAPackage,
+            syntax.Parts[2].IdentifierText
+        );
+
+        return null;
     }
 }

@@ -18,6 +18,7 @@ public enum TokenKind
     Mod,
     Mut,
     Never,
+    Pkg,
     Pub,
     Return,
 

@@ -10,7 +10,7 @@
     "ModClause": {
       "children": {
         "ModKeyword": "Token",
-        "Name": "Name"
+        "Name": "IdentifierToken"
       }
     },
     "UseClause": {

@@ -3,27 +3,18 @@ using Bow.Compiler.Syntax;
 
 namespace Bow.Compiler.Binding;
 
-public sealed class ModuleSymbolBuilder(string name)
+public sealed class ModuleSymbolBuilder(string name, CompilationUnitSyntax root)
 {
-    private CompilationUnitSyntax? _root;
+    private readonly CompilationUnitSyntax _root = root;
 
     private ImmutableArray<CompilationUnitSyntax>.Builder? _lazyRoots;
 
     public string Name { get; } = name;
 
-    private List<ModuleSymbolBuilder>? _lazySubModuleBuilders;
-    public List<ModuleSymbolBuilder> SubModuleBuilders => _lazySubModuleBuilders ??= [];
-
     public void AddRoot(CompilationUnitSyntax root)
     {
         if (root == _root)
         {
-            return;
-        }
-
-        if (_root == null)
-        {
-            _root = root;
             return;
         }
 
@@ -36,7 +27,7 @@ public sealed class ModuleSymbolBuilder(string name)
         _lazyRoots.Add(root);
     }
 
-    public ModuleSymbol ToModuleSymbol(Compilation compilation)
+    public ModuleSymbol ToModuleSymbol(PackageSymbol compilation)
     {
         ImmutableArray<CompilationUnitSyntax> roots;
         if (_lazyRoots != null)
@@ -52,7 +43,7 @@ public sealed class ModuleSymbolBuilder(string name)
             roots = [];
         }
 
-        return new ModuleSymbol(compilation, Name, roots, null, _lazySubModuleBuilders);
+        return new ModuleSymbol(compilation, Name, roots, null);
     }
 
     public ModuleSymbol ToModuleSymbol(ModuleSymbol container)
@@ -71,12 +62,6 @@ public sealed class ModuleSymbolBuilder(string name)
             roots = [];
         }
 
-        return new ModuleSymbol(
-            container.Compilation,
-            Name,
-            roots,
-            container,
-            _lazySubModuleBuilders
-        );
+        return new ModuleSymbol(container.Package, Name, roots, container);
     }
 }

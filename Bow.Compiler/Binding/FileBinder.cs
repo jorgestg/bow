@@ -34,13 +34,13 @@ internal sealed class FileBinder : Binder
         Dictionary<string, Symbol> symbols = [];
         foreach (var useClause in syntaxTree.Root.UseClauses)
         {
-            var symbol = module.Binder.BindName(useClause.Name, diagnostics);
-            if (symbol.IsMissing)
+            var importedSymbol = module.Binder.BindName(useClause.Name, diagnostics);
+            if (importedSymbol.IsMissing)
             {
                 continue;
             }
 
-            symbols.TryAdd(symbol.Name, symbol);
+            symbols.TryAdd(importedSymbol.Name, importedSymbol);
         }
 
         return new FileBinder(module, syntaxTree, symbols.ToFrozenDictionary());
@@ -164,34 +164,16 @@ internal sealed class FileBinder : Binder
             return null;
         }
 
-        if (symbol is not ModuleSymbol module)
+        name = syntax.Parts[1].IdentifierText;
+        switch (symbol)
         {
-            diagnostics.AddError(syntax.Parts[0], DiagnosticMessages.NameIsNotAModule, name);
-            return null;
+            case PackageSymbol package:
+                return package.Modules.FindByName(name);
+            case ModuleSymbol module:
+                return module.MembersMap.TryGetValue(name, out var member) ? member : null;
         }
 
-        for (var i = 1; i < syntax.Parts.Count - 1; i++)
-        {
-            name = syntax.Parts[i].IdentifierText;
-            var subModule = module.SubModules.FindByName(name);
-            if (subModule != null)
-            {
-                module = subModule;
-                continue;
-            }
-
-            var member = module.Binder.LookupMember(name);
-            if (member != null)
-            {
-                diagnostics.AddError(syntax.Parts[i], DiagnosticMessages.NameIsNotAModule, name);
-                return null;
-            }
-
-            diagnostics.AddError(syntax.Parts[i], DiagnosticMessages.NameNotFound, name);
-            return null;
-        }
-
-        name = syntax.Parts[^1].IdentifierText;
-        return module.Binder.LookupMember(name);
+        diagnostics.AddError(syntax.Parts[0], DiagnosticMessages.NameIsNotAPackage, name);
+        return null;
     }
 }

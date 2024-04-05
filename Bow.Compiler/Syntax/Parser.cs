@@ -22,19 +22,44 @@ internal sealed class Parser(SyntaxFactory syntaxFactory)
     {
         _current = _scanner.NextToken();
 
-        var modClause = _current.Kind == TokenKind.Mod ? ParseModClause() : null;
+        ModClauseSyntax? modClause = null;
+        if (_current.Kind == TokenKind.Mod)
+        {
+            var modKeyword = Advance();
+            if (IsItemDeclarationStart())
+            {
+                return _syntaxFactory.CompilationUnit(
+                    null,
+                    // If we are already defining items, it's safe to skip use clauses.
+                    _syntaxFactory.SyntaxList<UseClauseSyntax>(),
+                    ParseItems(modKeyword)
+                );
+            }
+
+            modClause = ParseModClause(modKeyword);
+        }
+
         var useClauses = ParseUseClauses();
         var items = ParseItems();
         return _syntaxFactory.CompilationUnit(modClause, useClauses, items);
     }
 
-    // mod-clause = 'mod' name NL
-    private ModClauseSyntax ParseModClause()
+    private bool IsItemDeclarationStart()
     {
-        var modKeyword = Match(TokenKind.Mod);
-        var name = ParseName();
+        return _current.Kind switch
+        {
+            TokenKind.Enum or TokenKind.Fun or TokenKind.Struct => true,
+            _ when _current.ContextualKeywordKind == ContextualKeywordKind.Data => true,
+            _ => false,
+        };
+    }
+
+    // mod-clause = 'mod' ID NL
+    private ModClauseSyntax ParseModClause(Token modKeyword)
+    {
+        var identifier = MatchIdentifier();
         MatchNewLine();
-        return _syntaxFactory.ModClause(modKeyword, name);
+        return _syntaxFactory.ModClause(modKeyword, identifier);
     }
 
     private SyntaxList<UseClauseSyntax> ParseUseClauses()
@@ -49,7 +74,7 @@ internal sealed class Parser(SyntaxFactory syntaxFactory)
         return useClauses.ToSyntaxList();
     }
 
-    // use-clause = 'use' name NL
+    // use-clause = 'use' ID '.' ID NL
     private UseClauseSyntax ParseUseClause()
     {
         var useKeyword = Match(TokenKind.Use);
@@ -136,51 +161,72 @@ internal sealed class Parser(SyntaxFactory syntaxFactory)
                 or TokenKind.Star;
     }
 
-    // item-access-modifier = 'pub' | 'mod'
+    // item-access-modifier = 'pub' | 'pkg' | 'mod'
     // item = struct-definition | enum-definition | function-definition
-    private SyntaxList<ItemSyntax> ParseItems()
+    private SyntaxList<ItemSyntax> ParseItems(Token? modKeyword = null)
     {
         var items = _syntaxFactory.SyntaxListBuilder<ItemSyntax>();
 
         var slot = 0;
-        Token? accessModifier = null;
+        Token? accessModifier = modKeyword;
         while (true)
         {
             switch (_current.Kind)
             {
-                case TokenKind.NewLine:
-                    Advance();
-                    break;
-
                 case TokenKind.EndOfFile:
                     return items.ToSyntaxList();
 
                 case TokenKind.Pub:
+                case TokenKind.Pkg:
                 case TokenKind.Mod:
+                {
+                    if (accessModifier != null)
+                    {
+                        _diagnostics.AddError(
+                            _current,
+                            DiagnosticMessages.AccessModifierAlreadySpecified
+                        );
+
+                        Advance();
+                        break;
+                    }
+
                     accessModifier = Advance();
                     break;
+                }
 
                 case TokenKind.Enum:
+                {
                     items.Add(ParseEnumDefinition(slot++, accessModifier));
                     MatchNewLine();
+                    accessModifier = null;
                     break;
+                }
 
                 case TokenKind.Fun:
+                {
                     items.Add(ParseFunctionDefinition(slot++, accessModifier));
                     MatchNewLine();
+                    accessModifier = null;
                     break;
+                }
 
                 case TokenKind.Struct:
                 case TokenKind.Identifier
                     when _current.ContextualKeywordKind == ContextualKeywordKind.Data:
-                    items.Add(ParseStructDefinition(slot++, accessModifier, Advance()));
+                {
+                    items.Add(ParseStructDefinition(slot++, accessModifier, keyword: Advance()));
                     MatchNewLine();
+                    accessModifier = null;
                     break;
+                }
 
                 default:
+                {
                     _diagnostics.AddError(_current, DiagnosticMessages.ItemExpected);
                     Advance();
                     continue;
+                }
             }
         }
     }
@@ -212,7 +258,7 @@ internal sealed class Parser(SyntaxFactory syntaxFactory)
         );
     }
 
-    // member-access-modifier = 'pub' | 'file' | 'mod'
+    // member-access-modifier = 'pub' | 'pkg' | 'mod' | 'file'
     // member-declaration = field-declaration | method-definition
     private (
         SyntaxList<FieldDeclarationSyntax>,
@@ -233,6 +279,7 @@ internal sealed class Parser(SyntaxFactory syntaxFactory)
                     break;
 
                 case TokenKind.Pub:
+                case TokenKind.Pkg:
                 case TokenKind.Mod:
                 case TokenKind.Identifier
                     when _current.ContextualKeywordKind == ContextualKeywordKind.File:

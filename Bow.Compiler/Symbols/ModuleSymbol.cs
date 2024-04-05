@@ -5,26 +5,16 @@ using Bow.Compiler.Syntax;
 
 namespace Bow.Compiler.Symbols;
 
-public sealed class ModuleSymbol : Symbol
+public sealed class ModuleSymbol(
+    PackageSymbol package,
+    string name,
+    ImmutableArray<CompilationUnitSyntax> roots,
+    ModuleSymbol? previous
+) : Symbol
 {
     private readonly DiagnosticBag _diagnosticBag = new();
 
-    public ModuleSymbol(
-        Compilation compilation,
-        string name,
-        ImmutableArray<CompilationUnitSyntax> roots,
-        ModuleSymbol? previous,
-        IEnumerable<ModuleSymbolBuilder>? subModules
-    )
-    {
-        Name = name;
-        Compilation = compilation;
-        Roots = roots;
-        Previous = previous;
-        SubModules = subModules == null ? [] : CreateSubModules(this, subModules);
-    }
-
-    public override string Name { get; }
+    public override string Name { get; } = name;
     public override CompilationUnitSyntax Syntax => throw new InvalidOperationException();
     public override ModuleSymbol Module => this;
 
@@ -37,14 +27,13 @@ public sealed class ModuleSymbol : Symbol
 
     public override SymbolAccessibility Accessibility => SymbolAccessibility.Public;
 
-    public Compilation Compilation { get; }
-    public ImmutableArray<CompilationUnitSyntax> Roots { get; }
+    public PackageSymbol Package { get; } = package;
+    public ImmutableArray<CompilationUnitSyntax> Roots { get; } = roots;
 
     private ModuleSymbol? _lazyRoot;
     public ModuleSymbol RootModule => _lazyRoot ??= GetRootModule();
 
-    public ModuleSymbol? Previous { get; }
-    public ImmutableArray<ModuleSymbol> SubModules { get; }
+    public ModuleSymbol? Previous { get; } = previous;
 
     private ImmutableArray<TypeSymbol> _lazyTypes;
     public ImmutableArray<TypeSymbol> Types =>
@@ -86,21 +75,6 @@ public sealed class ModuleSymbol : Symbol
         }
 
         return fileBinders.MoveToImmutable();
-    }
-
-    private static ImmutableArray<ModuleSymbol> CreateSubModules(
-        ModuleSymbol self,
-        IEnumerable<ModuleSymbolBuilder> subModules
-    )
-    {
-        var builder = ImmutableArray.CreateBuilder<ModuleSymbol>(subModules.Count());
-        foreach (var subModule in subModules)
-        {
-            var symbol = subModule.ToModuleSymbol(self);
-            builder.Add(symbol);
-        }
-
-        return builder.MoveToImmutable();
     }
 
     private ImmutableArray<TypeSymbol> CreateTypes()
