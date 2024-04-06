@@ -22,4 +22,16 @@ internal static class DiagnosticMessages
 
     public const string BraceShouldGoOnTheSameLine =
         "'{' should go on the same line as the declaration.";
+
+    public const string IntegerIsTooLargeForSize = "Integer is too large for '{0}'.";
+    public const string ReturnExpressionExpected = "Return expression of type '{0}' expected.";
+
+    public const string ReturnTypeMismatch =
+        "The function return type is '{0}', but the return expression is of type '{1}'.";
+
+    public const string UnaryOperatorTypeMismatch =
+        "Cannot apply operator '{0}' to operand of type '{1}'.";
+
+    public const string BinaryOperatorTypeMismatch =
+        "Cannot apply operator '{0}' to operands of type '{1}' and '{2}'.";
 }

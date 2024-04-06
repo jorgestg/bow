@@ -136,7 +136,7 @@
         "Parameters": { "type": "ParameterDeclaration", "array": true },
         "CloseParenthesis": "Token",
         "ReturnType": { "type": "TypeReference", "optional": true },
-        "Body": "Block"
+        "Body": "BlockStatement"
       }
     },
     "ParameterDeclaration": {
@@ -165,7 +165,7 @@
     "Statement": {
       "abstract": true
     },
-    "Block": {
+    "BlockStatement": {
       "extends": "Statement",
       "children": {
         "OpenBrace": "Token",
@@ -188,6 +188,21 @@
     },
     "Expression": {
       "abstract": true
+    },
+    "UnaryExpression": {
+      "extends": "Expression",
+      "children": {
+        "Operator": "Token",
+        "Operand": "Expression"
+      }
+    },
+    "BinaryExpression": {
+      "extends": "Expression",
+      "children": {
+        "Left": "Expression",
+        "Operator": "Token",
+        "Right": "Expression"
+      }
     },
     "LiteralExpression": {
       "extends": "Expression",

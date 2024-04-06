@@ -1,60 +1,5 @@
 namespace Bow.Compiler.Syntax;
 
-public enum TokenKind
-{
-    // Special
-    Unknown = -1,
-    EndOfFile,
-    NewLine,
-
-    // Keywords
-    Enum,
-    False,
-
-    F32,
-    F64,
-
-    Fun,
-    Mod,
-    Mut,
-    Never,
-    Pkg,
-    Pub,
-    Return,
-
-    S8,
-    S16,
-    S32,
-    S64,
-
-    Self,
-    Struct,
-    True,
-
-    U8,
-    U16,
-    U32,
-    U64,
-
-    Unit,
-    Use,
-
-    // Literals
-    Identifier,
-    IntegerLiteral,
-    StringLiteral,
-    UnterminatedStringLiteral,
-
-    // Symbols
-    Comma,
-    Dot,
-    OpenBrace,
-    CloseBrace,
-    OpenParenthesis,
-    CloseParenthesis,
-    Star
-}
-
 public enum ContextualKeywordKind
 {
     None,
@@ -63,10 +8,10 @@ public enum ContextualKeywordKind
     Type
 }
 
-public class Token(SyntaxTree syntaxTree, TokenKind kind, Location location, bool isMissing)
+public class Token(SyntaxTree syntaxTree, SyntaxKind kind, Location location, bool isMissing)
     : SyntaxNode(syntaxTree)
 {
-    public TokenKind Kind { get; } = kind;
+    public override SyntaxKind Kind { get; } = kind;
     public override Location Location { get; } = location;
     public override bool IsMissing { get; } = isMissing;
 
@@ -74,7 +19,7 @@ public class Token(SyntaxTree syntaxTree, TokenKind kind, Location location, boo
     {
         get
         {
-            if (Kind != TokenKind.Identifier)
+            if (Kind != SyntaxKind.IdentifierToken)
             {
                 return ContextualKeywordKind.None;
             }
@@ -93,7 +38,7 @@ public class Token(SyntaxTree syntaxTree, TokenKind kind, Location location, boo
 public sealed class IdentifierToken : Token
 {
     public IdentifierToken(SyntaxTree syntaxTree, Location location, bool isMissing)
-        : base(syntaxTree, TokenKind.Identifier, location, isMissing)
+        : base(syntaxTree, SyntaxKind.IdentifierToken, location, isMissing)
     {
         IdentifierText = ToString();
     }

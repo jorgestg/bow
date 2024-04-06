@@ -21,10 +21,10 @@ internal sealed class ModuleBinder(ModuleSymbol module)
 
     public override Symbol BindName(NameSyntax syntax, DiagnosticBag diagnostics)
     {
-        Symbol? symbol = syntax switch
+        Symbol? symbol = syntax.Kind switch
         {
-            SimpleNameSyntax s => BindSimpleName(s, diagnostics),
-            QualifiedNameSyntax s => BindQualifiedName(s, diagnostics),
+            SyntaxKind.SimpleName => BindSimpleName((SimpleNameSyntax)syntax, diagnostics),
+            SyntaxKind.QualifiedName => BindQualifiedName((QualifiedNameSyntax)syntax, diagnostics),
             _ => throw new UnreachableException()
         };
 

@@ -26,19 +26,49 @@ internal sealed class Scanner(SyntaxFactory syntaxFactory)
 
         return c switch
         {
-            '\0' => CreateToken(TokenKind.EndOfFile),
-            '\n' => CreateToken(TokenKind.NewLine),
-            '{' => CreateToken(TokenKind.OpenBrace),
-            '}' => CreateToken(TokenKind.CloseBrace),
-            ',' => CreateToken(TokenKind.Comma),
-            '.' => CreateToken(TokenKind.Dot),
-            '(' => CreateToken(TokenKind.OpenParenthesis),
-            ')' => CreateToken(TokenKind.CloseParenthesis),
-            '*' => CreateToken(TokenKind.Star),
+            // Special
+            '\0' => CreateToken(SyntaxKind.EndOfFileToken),
+            '\n' => CreateToken(SyntaxKind.NewLineToken),
+
+            // Delimiters
+            ',' => CreateToken(SyntaxKind.CommaToken),
+            '.' => CreateToken(SyntaxKind.DotToken),
+            '{' => CreateToken(SyntaxKind.OpenBraceToken),
+            '}' => CreateToken(SyntaxKind.CloseBraceToken),
+            '(' => CreateToken(SyntaxKind.OpenParenthesisToken),
+            ')' => CreateToken(SyntaxKind.CloseParenthesisToken),
+
+            // Operators
+            '*' => CreateToken(SyntaxKind.StarToken),
+            '/' => CreateToken(SyntaxKind.SlashToken),
+            '+' => CreateToken(SyntaxKind.PlusToken),
+            '-' => CreateToken(SyntaxKind.MinusToken),
+            '%' => CreateToken(SyntaxKind.PercentToken),
+            '=' => CreateCompoundToken('=', SyntaxKind.EqualsEqualsToken, SyntaxKind.EqualsToken),
+            '>'
+                => CreateCompoundToken(
+                    '=',
+                    SyntaxKind.GreaterThanEqualsToken,
+                    SyntaxKind.GreaterThanToken
+                ),
+
+            '<'
+                => CurrentChar == '>'
+                    ? CreateToken(SyntaxKind.DiamondToken)
+                    : CreateCompoundToken(
+                        '=',
+                        SyntaxKind.LessThanEqualsToken,
+                        SyntaxKind.LessThanToken
+                    ),
+
+            '&' => CreateToken(SyntaxKind.AmpersandToken),
+            '|' => CreateToken(SyntaxKind.PipeToken),
+
+            // Literals
             '"' => CreateStringLiteralToken(),
             _ when char.IsAsciiLetter(c) => CreateIdentifierOrKeywordToken(),
             _ when char.IsDigit(c) => CreateNumberToken(),
-            _ => CreateToken(TokenKind.Unknown)
+            _ => CreateToken(SyntaxKind.UnknownToken)
         };
     }
 
@@ -74,9 +104,20 @@ internal sealed class Scanner(SyntaxFactory syntaxFactory)
                 default:
                     return newLineIndex == -1
                         ? null
-                        : _syntaxFactory.Token(TokenKind.NewLine, newLineIndex, 1);
+                        : _syntaxFactory.Token(SyntaxKind.NewLineToken, newLineIndex, 1);
             }
         }
+    }
+
+    private Token CreateCompoundToken(char nextChar, SyntaxKind compound, SyntaxKind simple)
+    {
+        if (CurrentChar == nextChar)
+        {
+            _currentIndex++;
+            return CreateToken(compound);
+        }
+
+        return CreateToken(simple);
     }
 
     public Token CreateStringLiteralToken()
@@ -87,12 +128,12 @@ internal sealed class Scanner(SyntaxFactory syntaxFactory)
             {
                 case '\0':
                 case '\n':
-                    return CreateToken(TokenKind.UnterminatedStringLiteral);
+                    return CreateToken(SyntaxKind.UnterminatedStringLiteral);
 
                 case '"':
                     // Eat closing "
                     _currentIndex++;
-                    return CreateToken(TokenKind.StringLiteral);
+                    return CreateToken(SyntaxKind.StringLiteral);
 
                 default:
                     _currentIndex++;
@@ -113,36 +154,33 @@ internal sealed class Scanner(SyntaxFactory syntaxFactory)
         var span = _source.AsSpan(_startIndex, _currentIndex - _startIndex);
         return span switch
         {
-            "enum" => CreateToken(TokenKind.Enum),
-            "false" => CreateToken(TokenKind.False),
-            "f32" => CreateToken(TokenKind.F32),
-            "f64" => CreateToken(TokenKind.F64),
-            "fun" => CreateToken(TokenKind.Fun),
-            "mod" => CreateToken(TokenKind.Mod),
-            "mut" => CreateToken(TokenKind.Mut),
-            "never" => CreateToken(TokenKind.Never),
-            "pkg" => CreateToken(TokenKind.Pkg),
-            "pub" => CreateToken(TokenKind.Pub),
-            "return" => CreateToken(TokenKind.Return),
-            "s8" => CreateToken(TokenKind.S8),
-            "s16" => CreateToken(TokenKind.S16),
-            "s32" => CreateToken(TokenKind.S32),
-            "s64" => CreateToken(TokenKind.S64),
-            "self" => CreateToken(TokenKind.Self),
-            "struct" => CreateToken(TokenKind.Struct),
-            "true" => CreateToken(TokenKind.True),
-            "u8" => CreateToken(TokenKind.U8),
-            "u16" => CreateToken(TokenKind.U16),
-            "u32" => CreateToken(TokenKind.U32),
-            "u64" => CreateToken(TokenKind.U64),
-            "unit" => CreateToken(TokenKind.Unit),
-            "use" => CreateToken(TokenKind.Use),
-            // "let" => CreateToken(TokenKind.Let),
-            // "if" => CreateToken(TokenKind.If),
-            // "else" => CreateToken(TokenKind.Else),
-            // "extern" => CreateToken(TokenKind.Extern),
-            // "as" => CreateToken(TokenKind.As),
-            // "const" => CreateToken(TokenKind.Const),
+            "and" => CreateToken(SyntaxKind.AndKeyword),
+            "enum" => CreateToken(SyntaxKind.EnumKeyword),
+            "false" => CreateToken(SyntaxKind.FalseKeyword),
+            "f32" => CreateToken(SyntaxKind.F32Keyword),
+            "f64" => CreateToken(SyntaxKind.F64Keyword),
+            "fun" => CreateToken(SyntaxKind.FunKeyword),
+            "mod" => CreateToken(SyntaxKind.ModKeyword),
+            "mut" => CreateToken(SyntaxKind.MutKeyword),
+            "never" => CreateToken(SyntaxKind.NeverKeyword),
+            "not" => CreateToken(SyntaxKind.NotKeyword),
+            "or" => CreateToken(SyntaxKind.OrKeyword),
+            "pkg" => CreateToken(SyntaxKind.PkgKeyword),
+            "pub" => CreateToken(SyntaxKind.PubKeyword),
+            "return" => CreateToken(SyntaxKind.ReturnKeyword),
+            "s8" => CreateToken(SyntaxKind.S8Keyword),
+            "s16" => CreateToken(SyntaxKind.S16Keyword),
+            "s32" => CreateToken(SyntaxKind.S32Keyword),
+            "s64" => CreateToken(SyntaxKind.S64Keyword),
+            "self" => CreateToken(SyntaxKind.SelfKeyword),
+            "struct" => CreateToken(SyntaxKind.StructKeyword),
+            "true" => CreateToken(SyntaxKind.TrueKeyword),
+            "u8" => CreateToken(SyntaxKind.U8Keyword),
+            "u16" => CreateToken(SyntaxKind.U16Keyword),
+            "u32" => CreateToken(SyntaxKind.U32Keyword),
+            "u64" => CreateToken(SyntaxKind.U64Keyword),
+            "unit" => CreateToken(SyntaxKind.UnitKeyword),
+            "use" => CreateToken(SyntaxKind.UseKeyword),
             _ => _syntaxFactory.Identifier(_startIndex, _currentIndex - _startIndex)
         };
     }
@@ -177,12 +215,12 @@ internal sealed class Scanner(SyntaxFactory syntaxFactory)
                     goto default;
 
                 default:
-                    return CreateToken(TokenKind.IntegerLiteral);
+                    return CreateToken(SyntaxKind.IntegerLiteral);
             }
         }
     }
 
-    private Token CreateToken(TokenKind kind)
+    private Token CreateToken(SyntaxKind kind)
     {
         return _syntaxFactory.Token(kind, _startIndex, _currentIndex - _startIndex);
     }

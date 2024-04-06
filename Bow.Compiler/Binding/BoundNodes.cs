@@ -3,17 +3,36 @@ using Bow.Compiler.Syntax;
 
 namespace Bow.Compiler.Binding;
 
+internal enum BoundNodeKind
+{
+    // Statements
+    BlockStatement,
+    ExpressionStatement,
+    ReturnStatement,
+
+    // Expressions
+    MissingExpression,
+    LiteralExpression,
+    UnaryExpression,
+    BinaryExpression,
+}
+
 internal abstract class BoundNode
 {
     public abstract SyntaxNode Syntax { get; }
+    public abstract BoundNodeKind Kind { get; }
 }
 
 internal abstract class BoundStatement : BoundNode;
 
-internal sealed class BoundBlock(BlockSyntax syntax, ImmutableArray<BoundStatement> statements)
-    : BoundStatement
+internal sealed class BoundBlockStatement(
+    BlockStatementSyntax syntax,
+    ImmutableArray<BoundStatement> statements
+) : BoundStatement
 {
-    public override BlockSyntax Syntax { get; } = syntax;
+    public override BlockStatementSyntax Syntax { get; } = syntax;
+    public override BoundNodeKind Kind => BoundNodeKind.BlockStatement;
+
     public ImmutableArray<BoundStatement> Statements { get; } = statements;
 }
 
@@ -23,6 +42,8 @@ internal sealed class BoundReturnStatement(
 ) : BoundStatement
 {
     public override ReturnStatementSyntax Syntax { get; } = syntax;
+    public override BoundNodeKind Kind => BoundNodeKind.ReturnStatement;
+
     public BoundExpression? Expression { get; } = expression;
 }
 
@@ -32,12 +53,21 @@ internal sealed class BoundExpressionStatement(
 ) : BoundStatement
 {
     public override ExpressionStatementSyntax Syntax { get; } = syntax;
+    public override BoundNodeKind Kind => BoundNodeKind.ExpressionStatement;
+
     public BoundExpression Expression { get; } = expression;
 }
 
 internal abstract class BoundExpression : BoundNode
 {
     public abstract TypeSymbol Type { get; }
+}
+
+internal sealed class BoundMissingExpression(MissingExpressionSyntax syntax) : BoundExpression
+{
+    public override SyntaxNode Syntax { get; } = syntax;
+    public override BoundNodeKind Kind => BoundNodeKind.MissingExpression;
+    public override TypeSymbol Type { get; } = new MissingTypeSymbol(syntax);
 }
 
 internal sealed class BoundLiteralExpression(
@@ -47,6 +77,65 @@ internal sealed class BoundLiteralExpression(
 ) : BoundExpression
 {
     public override LiteralExpressionSyntax Syntax { get; } = syntax;
+    public override BoundNodeKind Kind => BoundNodeKind.LiteralExpression;
     public override TypeSymbol Type { get; } = type;
+
     public object Value { get; } = value;
+}
+
+internal enum BoundUnaryOperatorKind
+{
+    Negation,
+    LogicalNegation
+}
+
+internal sealed class BoundUnaryExpression(
+    UnaryExpressionSyntax syntax,
+    BoundUnaryOperatorKind op,
+    BoundExpression operand,
+    TypeSymbol type
+) : BoundExpression
+{
+    public override UnaryExpressionSyntax Syntax { get; } = syntax;
+    public override BoundNodeKind Kind => BoundNodeKind.UnaryExpression;
+    public override TypeSymbol Type { get; } = type;
+
+    public BoundUnaryOperatorKind Operator { get; } = op;
+    public BoundExpression Operand { get; } = operand;
+}
+
+internal enum BoundBinaryOperatorKind
+{
+    Multiplication,
+    Division,
+    Modulo,
+    Addition,
+    Subtraction,
+    Greater,
+    GreaterOrEqual,
+    Less,
+    LessOrEqual,
+    Equals,
+    NotEquals,
+    BitwiseAnd,
+    BitwiseOr,
+    LogicalAnd,
+    LogicalOr
+}
+
+internal sealed class BoundBinaryExpression(
+    BinaryExpressionSyntax syntax,
+    BoundExpression left,
+    BoundBinaryOperatorKind op,
+    BoundExpression right,
+    TypeSymbol type
+) : BoundExpression
+{
+    public override BinaryExpressionSyntax Syntax { get; } = syntax;
+    public override BoundNodeKind Kind => BoundNodeKind.BinaryExpression;
+    public override TypeSymbol Type { get; } = type;
+
+    public BoundExpression Left { get; } = left;
+    public BoundBinaryOperatorKind Operator { get; } = op;
+    public BoundExpression Right { get; } = right;
 }

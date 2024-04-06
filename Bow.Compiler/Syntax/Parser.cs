@@ -23,7 +23,7 @@ internal sealed class Parser(SyntaxFactory syntaxFactory)
         _current = _scanner.NextToken();
 
         ModClauseSyntax? modClause = null;
-        if (_current.Kind == TokenKind.Mod)
+        if (_current.Kind == SyntaxKind.ModKeyword)
         {
             var modKeyword = Advance();
             if (IsItemDeclarationStart())
@@ -31,7 +31,7 @@ internal sealed class Parser(SyntaxFactory syntaxFactory)
                 return _syntaxFactory.CompilationUnit(
                     null,
                     // If we are already defining items, it's safe to skip use clauses.
-                    _syntaxFactory.SyntaxList<UseClauseSyntax>(),
+                    new SyntaxList<UseClauseSyntax>(),
                     ParseItems(modKeyword)
                 );
             }
@@ -48,7 +48,7 @@ internal sealed class Parser(SyntaxFactory syntaxFactory)
     {
         return _current.Kind switch
         {
-            TokenKind.Enum or TokenKind.Fun or TokenKind.Struct => true,
+            SyntaxKind.EnumKeyword or SyntaxKind.FunKeyword or SyntaxKind.StructKeyword => true,
             _ when _current.ContextualKeywordKind == ContextualKeywordKind.Data => true,
             _ => false,
         };
@@ -64,8 +64,8 @@ internal sealed class Parser(SyntaxFactory syntaxFactory)
 
     private SyntaxList<UseClauseSyntax> ParseUseClauses()
     {
-        var useClauses = _syntaxFactory.SyntaxListBuilder<UseClauseSyntax>();
-        while (_current.Kind == TokenKind.Use)
+        SyntaxListBuilder<UseClauseSyntax> useClauses = new();
+        while (_current.Kind == SyntaxKind.UseKeyword)
         {
             var useClause = ParseUseClause();
             useClauses.Add(useClause);
@@ -77,7 +77,7 @@ internal sealed class Parser(SyntaxFactory syntaxFactory)
     // use-clause = 'use' ID '.' ID NL
     private UseClauseSyntax ParseUseClause()
     {
-        var useKeyword = Match(TokenKind.Use);
+        var useKeyword = Match(SyntaxKind.UseKeyword);
         var name = ParseName();
         MatchNewLine();
         return _syntaxFactory.UseClause(useKeyword, name);
@@ -88,15 +88,15 @@ internal sealed class Parser(SyntaxFactory syntaxFactory)
     private NameSyntax ParseName()
     {
         var identifierToken = MatchIdentifier();
-        if (_current.Kind != TokenKind.Dot)
+        if (_current.Kind != SyntaxKind.DotToken)
         {
             return _syntaxFactory.SimpleName(identifierToken);
         }
 
-        var parts = _syntaxFactory.SyntaxListBuilder<IdentifierToken>();
+        SyntaxListBuilder<IdentifierToken> parts = new();
         parts.Add(identifierToken);
 
-        while (_current.Kind == TokenKind.Dot)
+        while (_current.Kind == SyntaxKind.DotToken)
         {
             Advance(); // Consume the dot
             identifierToken = MatchIdentifier();
@@ -113,25 +113,25 @@ internal sealed class Parser(SyntaxFactory syntaxFactory)
     {
         switch (_current.Kind)
         {
-            case TokenKind.F32:
-            case TokenKind.F64:
-            case TokenKind.Never:
-            case TokenKind.S8:
-            case TokenKind.S16:
-            case TokenKind.S32:
-            case TokenKind.S64:
-            case TokenKind.U8:
-            case TokenKind.U16:
-            case TokenKind.U32:
-            case TokenKind.U64:
-            case TokenKind.Unit:
+            case SyntaxKind.F32Keyword:
+            case SyntaxKind.F64Keyword:
+            case SyntaxKind.NeverKeyword:
+            case SyntaxKind.S8Keyword:
+            case SyntaxKind.S16Keyword:
+            case SyntaxKind.S32Keyword:
+            case SyntaxKind.S64Keyword:
+            case SyntaxKind.U8Keyword:
+            case SyntaxKind.U16Keyword:
+            case SyntaxKind.U32Keyword:
+            case SyntaxKind.U64Keyword:
+            case SyntaxKind.UnitKeyword:
                 return _syntaxFactory.KeywordTypeReference(Advance());
 
-            case TokenKind.Identifier:
+            case SyntaxKind.IdentifierToken:
                 var name = ParseName();
                 return _syntaxFactory.NamedTypeReference(name);
 
-            case TokenKind.Star:
+            case SyntaxKind.StarToken:
                 var starToken = Advance();
                 var elementType = ParseTypeReference();
                 return _syntaxFactory.PointerTypeReference(starToken, elementType);
@@ -145,27 +145,27 @@ internal sealed class Parser(SyntaxFactory syntaxFactory)
     private bool IsTypeReferenceStart()
     {
         return _current.Kind
-            is TokenKind.F32
-                or TokenKind.F64
-                or TokenKind.Never
-                or TokenKind.S8
-                or TokenKind.S16
-                or TokenKind.S32
-                or TokenKind.S64
-                or TokenKind.U8
-                or TokenKind.U16
-                or TokenKind.U32
-                or TokenKind.U64
-                or TokenKind.Unit
-                or TokenKind.Identifier
-                or TokenKind.Star;
+            is SyntaxKind.F32Keyword
+                or SyntaxKind.F64Keyword
+                or SyntaxKind.NeverKeyword
+                or SyntaxKind.S8Keyword
+                or SyntaxKind.S16Keyword
+                or SyntaxKind.S32Keyword
+                or SyntaxKind.S64Keyword
+                or SyntaxKind.U8Keyword
+                or SyntaxKind.U16Keyword
+                or SyntaxKind.U32Keyword
+                or SyntaxKind.U64Keyword
+                or SyntaxKind.UnitKeyword
+                or SyntaxKind.IdentifierToken
+                or SyntaxKind.StarToken;
     }
 
     // item-access-modifier = 'pub' | 'pkg' | 'mod'
     // item = struct-definition | enum-definition | function-definition
     private SyntaxList<ItemSyntax> ParseItems(Token? modKeyword = null)
     {
-        var items = _syntaxFactory.SyntaxListBuilder<ItemSyntax>();
+        SyntaxListBuilder<ItemSyntax> items = new();
 
         var slot = 0;
         Token? accessModifier = modKeyword;
@@ -173,12 +173,12 @@ internal sealed class Parser(SyntaxFactory syntaxFactory)
         {
             switch (_current.Kind)
             {
-                case TokenKind.EndOfFile:
+                case SyntaxKind.EndOfFileToken:
                     return items.ToSyntaxList();
 
-                case TokenKind.Pub:
-                case TokenKind.Pkg:
-                case TokenKind.Mod:
+                case SyntaxKind.PubKeyword:
+                case SyntaxKind.PkgKeyword:
+                case SyntaxKind.ModKeyword:
                 {
                     if (accessModifier != null)
                     {
@@ -195,7 +195,7 @@ internal sealed class Parser(SyntaxFactory syntaxFactory)
                     break;
                 }
 
-                case TokenKind.Enum:
+                case SyntaxKind.EnumKeyword:
                 {
                     items.Add(ParseEnumDefinition(slot++, accessModifier));
                     MatchNewLine();
@@ -203,7 +203,7 @@ internal sealed class Parser(SyntaxFactory syntaxFactory)
                     break;
                 }
 
-                case TokenKind.Fun:
+                case SyntaxKind.FunKeyword:
                 {
                     items.Add(ParseFunctionDefinition(slot++, accessModifier));
                     MatchNewLine();
@@ -211,8 +211,8 @@ internal sealed class Parser(SyntaxFactory syntaxFactory)
                     break;
                 }
 
-                case TokenKind.Struct:
-                case TokenKind.Identifier
+                case SyntaxKind.StructKeyword:
+                case SyntaxKind.IdentifierToken
                     when _current.ContextualKeywordKind == ContextualKeywordKind.Data:
                 {
                     items.Add(ParseStructDefinition(slot++, accessModifier, keyword: Advance()));
@@ -241,11 +241,11 @@ internal sealed class Parser(SyntaxFactory syntaxFactory)
     )
     {
         var identifier = MatchIdentifier();
-        var openBrace = Match(TokenKind.OpenBrace);
+        var openBrace = Match(SyntaxKind.OpenBraceToken);
         MatchNewLine();
 
         var (fields, methods) = ParseMemberDeclarations();
-        var closeBrace = Match(TokenKind.CloseBrace);
+        var closeBrace = Match(SyntaxKind.CloseBraceToken);
         return _syntaxFactory.StructDefinition(
             slot,
             accessModifier,
@@ -265,8 +265,8 @@ internal sealed class Parser(SyntaxFactory syntaxFactory)
         SyntaxList<FunctionDefinitionSyntax>
     ) ParseMemberDeclarations()
     {
-        var fields = _syntaxFactory.SyntaxListBuilder<FieldDeclarationSyntax>();
-        var methods = _syntaxFactory.SyntaxListBuilder<FunctionDefinitionSyntax>();
+        SyntaxListBuilder<FieldDeclarationSyntax> fields = new();
+        SyntaxListBuilder<FunctionDefinitionSyntax> methods = new();
 
         var slot = 0;
         Token? accessModifier = null;
@@ -274,25 +274,25 @@ internal sealed class Parser(SyntaxFactory syntaxFactory)
         {
             switch (_current.Kind)
             {
-                case TokenKind.EndOfFile:
-                case TokenKind.CloseBrace:
+                case SyntaxKind.EndOfFileToken:
+                case SyntaxKind.CloseBraceToken:
                     break;
 
-                case TokenKind.Pub:
-                case TokenKind.Pkg:
-                case TokenKind.Mod:
-                case TokenKind.Identifier
+                case SyntaxKind.PubKeyword:
+                case SyntaxKind.PkgKeyword:
+                case SyntaxKind.ModKeyword:
+                case SyntaxKind.IdentifierToken
                     when _current.ContextualKeywordKind == ContextualKeywordKind.File:
                     accessModifier = Advance();
                     continue;
 
-                case TokenKind.Mut:
-                case TokenKind.Identifier:
+                case SyntaxKind.MutKeyword:
+                case SyntaxKind.IdentifierToken:
                     fields.Add(ParseFieldDeclaration(slot++, accessModifier));
                     MatchNewLine();
                     continue;
 
-                case TokenKind.Fun:
+                case SyntaxKind.FunKeyword:
                     methods.Add(ParseFunctionDefinition(slot++, accessModifier));
                     MatchNewLine();
                     continue;
@@ -315,7 +315,7 @@ internal sealed class Parser(SyntaxFactory syntaxFactory)
     // field-declaration = member-access-modifier? 'mut'? ID type-reference
     private FieldDeclarationSyntax ParseFieldDeclaration(int slot, Token? accessModifier)
     {
-        var mutableKeyword = _current.Kind == TokenKind.Mut ? Advance() : null;
+        var mutableKeyword = _current.Kind == SyntaxKind.MutKeyword ? Advance() : null;
         var identifier = MatchIdentifier();
         var type = ParseTypeReference();
         return _syntaxFactory.FieldDeclaration(
@@ -331,11 +331,11 @@ internal sealed class Parser(SyntaxFactory syntaxFactory)
     // enum-member-declarations = NL enum-member-declaration (NL enum-member-declaration)* NL
     private EnumDefinitionSyntax ParseEnumDefinition(int slot, Token? accessModifier)
     {
-        var enumKeyword = Match(TokenKind.Enum);
+        var enumKeyword = Match(SyntaxKind.EnumKeyword);
         var identifier = MatchIdentifier();
-        var openBrace = Match(TokenKind.OpenBrace);
+        var openBrace = Match(SyntaxKind.OpenBraceToken);
         var (cases, methods) = ParseEnumMemberDeclarations();
-        var closeBrace = Match(TokenKind.CloseBrace);
+        var closeBrace = Match(SyntaxKind.CloseBraceToken);
         return _syntaxFactory.EnumDefinition(
             slot,
             accessModifier,
@@ -354,28 +354,28 @@ internal sealed class Parser(SyntaxFactory syntaxFactory)
         SyntaxList<FunctionDefinitionSyntax>
     ) ParseEnumMemberDeclarations()
     {
-        var cases = _syntaxFactory.SyntaxListBuilder<EnumCaseDeclarationSyntax>();
-        var methods = _syntaxFactory.SyntaxListBuilder<FunctionDefinitionSyntax>();
+        SyntaxListBuilder<EnumCaseDeclarationSyntax> cases = new();
+        SyntaxListBuilder<FunctionDefinitionSyntax> methods = new();
 
         var slot = 0;
         while (true)
         {
             switch (_current.Kind)
             {
-                case TokenKind.EndOfFile:
-                case TokenKind.CloseBrace:
+                case SyntaxKind.EndOfFileToken:
+                case SyntaxKind.CloseBraceToken:
                     break;
 
-                case TokenKind.Pub:
-                case TokenKind.Mod:
-                case TokenKind.Fun:
-                case TokenKind.Identifier
+                case SyntaxKind.PubKeyword:
+                case SyntaxKind.ModKeyword:
+                case SyntaxKind.FunKeyword:
+                case SyntaxKind.IdentifierToken
                     when _current.ContextualKeywordKind == ContextualKeywordKind.File:
                     methods.Add(ParseFunctionDefinition(slot++, null));
                     MatchNewLine();
                     continue;
 
-                case TokenKind.Identifier:
+                case SyntaxKind.IdentifierToken:
                     cases.Add(ParseEnumCaseDeclaration(slot));
                     MatchNewLine();
                     continue;
@@ -399,14 +399,14 @@ internal sealed class Parser(SyntaxFactory syntaxFactory)
     private EnumCaseDeclarationSyntax ParseEnumCaseDeclaration(int slot)
     {
         var identifier = MatchIdentifier();
-        if (_current.Kind != TokenKind.OpenParenthesis)
+        if (_current.Kind != SyntaxKind.OpenParenthesisToken)
         {
             return _syntaxFactory.EnumCaseDeclaration(slot, identifier, null);
         }
 
-        var openParenthesis = Match(TokenKind.OpenParenthesis);
+        var openParenthesis = Match(SyntaxKind.OpenParenthesisToken);
         var type = ParseTypeReference();
-        var closeParenthesis = Match(TokenKind.CloseParenthesis);
+        var closeParenthesis = Match(SyntaxKind.CloseParenthesisToken);
         return _syntaxFactory.EnumCaseDeclaration(
             slot,
             identifier,
@@ -419,11 +419,11 @@ internal sealed class Parser(SyntaxFactory syntaxFactory)
     // function-definition = 'fun' ID '(' parameter-declarations? ')' type-reference? block
     private FunctionDefinitionSyntax ParseFunctionDefinition(int slot, Token? accessModifier)
     {
-        var funKeyword = Match(TokenKind.Fun);
+        var funKeyword = Match(SyntaxKind.FunKeyword);
         var identifier = MatchIdentifier();
-        var openParenthesis = Match(TokenKind.OpenParenthesis);
+        var openParenthesis = Match(SyntaxKind.OpenParenthesisToken);
         var parameters = ParseParameterDeclarations();
-        var closeParenthesis = Match(TokenKind.CloseParenthesis);
+        var closeParenthesis = Match(SyntaxKind.CloseParenthesisToken);
         var returnType = IsTypeReferenceStart() ? ParseTypeReference() : null;
         var block = ParseBlock();
         return _syntaxFactory.FunctionDefinition(
@@ -442,19 +442,19 @@ internal sealed class Parser(SyntaxFactory syntaxFactory)
     // parameter-declarations = parameter-declaration ((',' parameter-declaration)+ ','?)?
     private SyntaxList<ParameterDeclarationSyntax> ParseParameterDeclarations()
     {
-        var parameters = _syntaxFactory.SyntaxListBuilder<ParameterDeclarationSyntax>();
+        SyntaxListBuilder<ParameterDeclarationSyntax> parameters = new();
         while (true)
         {
             switch (_current.Kind)
             {
-                case TokenKind.EndOfFile:
-                case TokenKind.CloseParenthesis:
-                case TokenKind.OpenBrace:
+                case SyntaxKind.EndOfFileToken:
+                case SyntaxKind.CloseParenthesisToken:
+                case SyntaxKind.OpenBraceToken:
                     return parameters.ToSyntaxList();
 
                 default:
                     parameters.Add(ParseParameterDeclaration());
-                    if (_current.Kind == TokenKind.Comma)
+                    if (_current.Kind == SyntaxKind.CommaToken)
                     {
                         Advance();
                     }
@@ -469,11 +469,11 @@ internal sealed class Parser(SyntaxFactory syntaxFactory)
     // self-parameter-declaration = 'mut'? '*'? 'self' | 'mut'? 'self' type-reference
     private ParameterDeclarationSyntax ParseParameterDeclaration()
     {
-        var mutableKeyword = _current.Kind == TokenKind.Mut ? Advance() : null;
-        if (_current.Kind == TokenKind.Star)
+        var mutableKeyword = _current.Kind == SyntaxKind.MutKeyword ? Advance() : null;
+        if (_current.Kind == SyntaxKind.StarToken)
         {
             var starToken = Advance();
-            var selfKeyword = Match(TokenKind.Self);
+            var selfKeyword = Match(SyntaxKind.SelfKeyword);
             return _syntaxFactory.SelfParameterDeclaration(
                 mutableKeyword,
                 starToken,
@@ -482,9 +482,9 @@ internal sealed class Parser(SyntaxFactory syntaxFactory)
             );
         }
 
-        if (_current.Kind == TokenKind.Self)
+        if (_current.Kind == SyntaxKind.SelfKeyword)
         {
-            var selfKeyword = Match(TokenKind.Self);
+            var selfKeyword = Match(SyntaxKind.SelfKeyword);
             var optionalType = IsTypeReferenceStart() ? ParseTypeReference() : null;
             return _syntaxFactory.SelfParameterDeclaration(
                 mutableKeyword,
@@ -500,42 +500,42 @@ internal sealed class Parser(SyntaxFactory syntaxFactory)
     }
 
     // block = '{' (statements NL)? '}'
-    private BlockSyntax ParseBlock()
+    private BlockStatementSyntax ParseBlock()
     {
-        if (_current.Kind == TokenKind.NewLine)
+        if (_current.Kind == SyntaxKind.NewLineToken)
         {
             _diagnostics.AddError(_current, DiagnosticMessages.BraceShouldGoOnTheSameLine);
             Advance();
         }
 
-        var openBrace = Match(TokenKind.OpenBrace);
-        if (_current.Kind == TokenKind.CloseBrace)
+        var openBrace = Match(SyntaxKind.OpenBraceToken);
+        if (_current.Kind == SyntaxKind.CloseBraceToken)
         {
-            return _syntaxFactory.Block(
+            return _syntaxFactory.BlockStatement(
                 openBrace,
-                _syntaxFactory.SyntaxList<StatementSyntax>(),
-                Match(TokenKind.CloseBrace)
+                new SyntaxList<StatementSyntax>(),
+                Match(SyntaxKind.CloseBraceToken)
             );
         }
 
         MatchNewLine();
 
         var statements = ParseStatements();
-        var closeBrace = Match(TokenKind.CloseBrace);
-        return _syntaxFactory.Block(openBrace, statements, closeBrace);
+        var closeBrace = Match(SyntaxKind.CloseBraceToken);
+        return _syntaxFactory.BlockStatement(openBrace, statements, closeBrace);
     }
 
     // statements = statement (NL statement)*
     private SyntaxList<StatementSyntax> ParseStatements()
     {
-        var statements = _syntaxFactory.SyntaxListBuilder<StatementSyntax>();
+        SyntaxListBuilder<StatementSyntax> statements = new();
 
         while (true)
         {
             switch (_current.Kind)
             {
-                case TokenKind.EndOfFile:
-                case TokenKind.CloseBrace:
+                case SyntaxKind.EndOfFileToken:
+                case SyntaxKind.CloseBraceToken:
                     return statements.ToSyntaxList();
 
                 default:
@@ -563,7 +563,7 @@ internal sealed class Parser(SyntaxFactory syntaxFactory)
     {
         switch (_current.Kind)
         {
-            case TokenKind.Return:
+            case SyntaxKind.ReturnKeyword:
                 return ParseReturnStatement();
 
             default:
@@ -575,24 +575,66 @@ internal sealed class Parser(SyntaxFactory syntaxFactory)
     // return-statement = 'return' expression
     private ReturnStatementSyntax ParseReturnStatement()
     {
-        var returnKeyword = Match(TokenKind.Return);
+        var returnKeyword = Match(SyntaxKind.ReturnKeyword);
         var expression = ParseExpression();
         return _syntaxFactory.ReturnStatement(returnKeyword, expression);
     }
 
-    // expression = literal
+    // expression = literal | unary-expression | binary-expression
     private ExpressionSyntax ParseExpression()
     {
-        return ParseLiteral();
+        return ParseBinaryExpression();
     }
 
-    // literal = 'true' | 'false'
+    // binary-expression = expression (
+    //     '*' | '/' | '%'
+    //     | '+' | '-'
+    //     | '>' | '>=' | '<' | '<='
+    //     | '==' | '<>'
+    //     | '&'
+    //     | '|'
+    //     | 'and'
+    //     | 'or'
+    // ) expression
+    private ExpressionSyntax ParseBinaryExpression(int parentPrecedence = 0)
+    {
+        ExpressionSyntax left;
+        var unaryOperatorPrecedence = SyntaxFacts.GetUnaryOperatorPrecedence(_current.Kind);
+        if (unaryOperatorPrecedence >= parentPrecedence)
+        {
+            var operatorToken = Advance();
+            var operand = ParseBinaryExpression(unaryOperatorPrecedence);
+            left = _syntaxFactory.UnaryExpression(operatorToken, operand);
+        }
+        else
+        {
+            left = ParseLiteral();
+        }
+
+        while (true)
+        {
+            var precedence = SyntaxFacts.GetBinaryOperatorPrecedence(_current.Kind);
+            if (precedence <= parentPrecedence)
+            {
+                break;
+            }
+
+            var operatorToken = Advance();
+            var right = ParseBinaryExpression(precedence);
+            left = _syntaxFactory.BinaryExpression(left, operatorToken, right);
+        }
+
+        return left;
+    }
+
+    // literal = INT | 'true' | 'false'
     private ExpressionSyntax ParseLiteral()
     {
         switch (_current.Kind)
         {
-            case TokenKind.True:
-            case TokenKind.False:
+            case SyntaxKind.IntegerLiteral:
+            case SyntaxKind.TrueKeyword:
+            case SyntaxKind.FalseKeyword:
                 return _syntaxFactory.LiteralExpression(Advance());
 
             default:
@@ -608,7 +650,7 @@ internal sealed class Parser(SyntaxFactory syntaxFactory)
         return previous;
     }
 
-    private Token Match(TokenKind kind)
+    private Token Match(SyntaxKind kind)
     {
         if (_current.Kind == kind)
         {
@@ -627,7 +669,7 @@ internal sealed class Parser(SyntaxFactory syntaxFactory)
 
     private IdentifierToken MatchIdentifier()
     {
-        if (_current.Kind == TokenKind.Identifier)
+        if (_current.Kind == SyntaxKind.IdentifierToken)
         {
             return (IdentifierToken)Advance();
         }
@@ -635,7 +677,7 @@ internal sealed class Parser(SyntaxFactory syntaxFactory)
         _diagnostics.AddError(
             _current,
             DiagnosticMessages.TokenMismatch,
-            SyntaxFacts.GetKindDisplayText(TokenKind.Identifier),
+            SyntaxFacts.GetKindDisplayText(SyntaxKind.IdentifierToken),
             _current.ToString()
         );
 
@@ -644,7 +686,7 @@ internal sealed class Parser(SyntaxFactory syntaxFactory)
 
     private Token MatchNewLine()
     {
-        if (_current.Kind is TokenKind.NewLine or TokenKind.EndOfFile)
+        if (_current.Kind is SyntaxKind.NewLineToken or SyntaxKind.EndOfFileToken)
         {
             return Advance();
         }
@@ -652,12 +694,12 @@ internal sealed class Parser(SyntaxFactory syntaxFactory)
         _diagnostics.AddError(
             _current,
             DiagnosticMessages.TokenMismatch,
-            SyntaxFacts.GetKindDisplayText(TokenKind.NewLine),
+            SyntaxFacts.GetKindDisplayText(SyntaxKind.NewLineToken),
             _current.ToString()
         );
 
         return _syntaxFactory.MissingToken(
-            TokenKind.NewLine,
+            SyntaxKind.NewLineToken,
             _current.Location.Start,
             _current.Location.Length
         );

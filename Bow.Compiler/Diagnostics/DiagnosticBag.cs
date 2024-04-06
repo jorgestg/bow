@@ -38,6 +38,15 @@ public sealed class DiagnosticBag
         Add(diagnostic);
     }
 
+    public void AddError(SyntaxNode syntax, string format, string arg0, string arg1, string arg2)
+    {
+        var message = string.Format(format, arg0, arg1, arg2);
+        Diagnostic diagnostic =
+            new(DiagnosticSeverity.Error, syntax.SyntaxTree.SourceText, syntax.Location, message);
+
+        Add(diagnostic);
+    }
+
     public void AddWarning(SyntaxNode syntax, string message)
     {
         Diagnostic diagnostic =

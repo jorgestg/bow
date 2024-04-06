@@ -53,36 +53,38 @@ internal sealed class FileBinder : Binder
 
     public override TypeSymbol BindType(TypeReferenceSyntax syntax, DiagnosticBag diagnostics)
     {
-        switch (syntax)
+        switch (syntax.Kind)
         {
-            case KeywordTypeReferenceSyntax keywordType:
+            case SyntaxKind.KeywordTypeReference:
             {
-                return keywordType.Keyword.Kind switch
+                return ((KeywordTypeReferenceSyntax)syntax).Keyword.Kind switch
                 {
-                    TokenKind.F32 => BuiltInModule.Float32,
-                    TokenKind.F64 => BuiltInModule.Float64,
-                    TokenKind.Never => BuiltInModule.Never,
-                    TokenKind.S8 => BuiltInModule.Signed8,
-                    TokenKind.S16 => BuiltInModule.Signed16,
-                    TokenKind.S32 => BuiltInModule.Signed32,
-                    TokenKind.S64 => BuiltInModule.Signed64,
-                    TokenKind.Unit => BuiltInModule.Unit,
-                    TokenKind.U8 => BuiltInModule.Unsigned8,
-                    TokenKind.U16 => BuiltInModule.Unsigned16,
-                    TokenKind.U32 => BuiltInModule.Unsigned32,
-                    TokenKind.U64 => BuiltInModule.Unsigned64,
+                    SyntaxKind.F32Keyword => BuiltInModule.Float32,
+                    SyntaxKind.F64Keyword => BuiltInModule.Float64,
+                    SyntaxKind.NeverKeyword => BuiltInModule.Never,
+                    SyntaxKind.S8Keyword => BuiltInModule.Signed8,
+                    SyntaxKind.S16Keyword => BuiltInModule.Signed16,
+                    SyntaxKind.S32Keyword => BuiltInModule.Signed32,
+                    SyntaxKind.S64Keyword => BuiltInModule.Signed64,
+                    SyntaxKind.UnitKeyword => BuiltInModule.Unit,
+                    SyntaxKind.U8Keyword => BuiltInModule.Unsigned8,
+                    SyntaxKind.U16Keyword => BuiltInModule.Unsigned16,
+                    SyntaxKind.U32Keyword => BuiltInModule.Unsigned32,
+                    SyntaxKind.U64Keyword => BuiltInModule.Unsigned64,
                     _ => throw new UnreachableException()
                 };
             }
 
-            case PointerTypeReferenceSyntax pointerType:
+            case SyntaxKind.PointerTypeReference:
             {
+                var pointerType = (PointerTypeReferenceSyntax)syntax;
                 var innerType = BindType(pointerType.Type, diagnostics);
                 return new PointerTypeSymbol(pointerType, innerType);
             }
 
-            case NamedTypeReferenceSyntax namedType:
+            case SyntaxKind.NamedTypeReference:
             {
+                var namedType = (NamedTypeReferenceSyntax)syntax;
                 var symbol = BindName(namedType.Name, diagnostics);
                 if (symbol is TypeSymbol typeSymbol)
                 {
@@ -98,10 +100,10 @@ internal sealed class FileBinder : Binder
                 return new MissingTypeSymbol(namedType.Name);
             }
 
-            case MissingTypeReferenceSyntax missingType:
+            case SyntaxKind.MissingTypeReference:
             {
                 // Diagnostic already reported
-                return new MissingTypeSymbol(missingType);
+                return new MissingTypeSymbol(syntax);
             }
         }
 
@@ -110,10 +112,10 @@ internal sealed class FileBinder : Binder
 
     public override Symbol BindName(NameSyntax syntax, DiagnosticBag diagnostics)
     {
-        Symbol? symbol = syntax switch
+        Symbol? symbol = syntax.Kind switch
         {
-            SimpleNameSyntax s => BindSimpleName(s, diagnostics),
-            QualifiedNameSyntax s => BindQualifiedName(s, diagnostics),
+            SyntaxKind.SimpleName => BindSimpleName((SimpleNameSyntax)syntax, diagnostics),
+            SyntaxKind.QualifiedName => BindQualifiedName((QualifiedNameSyntax)syntax, diagnostics),
             _ => throw new UnreachableException()
         };
 

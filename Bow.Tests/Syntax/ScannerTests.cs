@@ -14,9 +14,9 @@ public class ScannerTests
         var newLine = scanner.NextToken();
         var identifier = scanner.NextToken();
 
-        Assert.Equal(TokenKind.NewLine, newLine.Kind);
+        Assert.Equal(SyntaxKind.NewLineToken, newLine.Kind);
         Assert.Equal(4, newLine.Location.Start);
-        Assert.Equal(TokenKind.Identifier, identifier.Kind);
+        Assert.Equal(SyntaxKind.IdentifierToken, identifier.Kind);
     }
 
     [Fact]
@@ -28,7 +28,7 @@ public class ScannerTests
 
         var number = scanner.NextToken();
 
-        Assert.Equal(TokenKind.IntegerLiteral, number.Kind);
+        Assert.Equal(SyntaxKind.IntegerLiteral, number.Kind);
         Assert.Equal("1_000_000", number.ToString());
     }
 }

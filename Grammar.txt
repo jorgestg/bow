@@ -34,12 +34,23 @@ parameter-declaration = 'mut'? (ID type-reference | '*'? 'self')
 block = '{' (statements NL)? '}'
 
 statements = statement (NL statement)*
-statement = return-expression
+statement = return-expression | expression
 return-statement = 'return' expression
 
-expression = literal
-literal = 'true' | 'false'
+expression = literal | unary-expression | binary-expression
+literal = INT | 'true' | 'false'
+unary-expression = ('not' | '-') expression
+binary-expression = expression (
+    '*' | '/' | '%'
+    | '+' | '-'
+    | '>' | '>='
+    | '<' | '<='
+    | '==' | '<>'
+    | '&' | '|'
+    | 'and' | 'or'
+) expression
 
+INT = [0-9]+ ('_' [0-9]+)*
 NL = '\n'
 STRING = '"' .* '"'
 ID = [a-zA-Z_][a-zA-Z_0-9]*

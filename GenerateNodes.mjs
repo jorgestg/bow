@@ -26,8 +26,10 @@ public partial class SyntaxFactory
 
 const { definitions } = JSON.parse(jsonFile);
 
+const keywords = ["operator", "else"];
 function toCamelCase(name) {
-  return name[0].toLowerCase() + name.substring(1);
+  const camelCaseName = name[0].toLowerCase() + name.substring(1);
+  return keywords.includes(camelCaseName) ? `@${camelCaseName}` : camelCaseName;
 }
 
 function processNames([name, typeOrOpts]) {
@@ -112,20 +114,26 @@ for (const name in definitions) {
                 .join("\n        ")
         }
     }${
-      properties.length == 0
+      abstract
         ? ""
         : `
 
-    ` +
-          properties
-            .map(
-              ([name, typeName, , modifier]) =>
-                `public ${
-                  abstract ? "abstract " : modifier
-                }${typeName} ${name} { get; }`
-            )
-            .join("\n    ")
+    public override SyntaxKind Kind => SyntaxKind.${name};`
     }${
+    properties.length == 0
+      ? ""
+      : `
+
+    ` +
+        properties
+          .map(
+            ([name, typeName, , modifier]) =>
+              `public ${
+                abstract ? "abstract " : modifier
+              }${typeName} ${name} { get; }`
+          )
+          .join("\n    ")
+  }${
     abstract
       ? ""
       : `

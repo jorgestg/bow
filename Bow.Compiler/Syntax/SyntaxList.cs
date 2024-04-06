@@ -2,13 +2,11 @@ using System.Collections;
 
 namespace Bow.Compiler.Syntax;
 
-public struct SyntaxListBuilder<TNode>(SyntaxTree syntaxTree)
+public struct SyntaxListBuilder<TNode>
     where TNode : SyntaxNode
 {
     private TNode[]? _nodes;
     private int _count;
-
-    public SyntaxTree SyntaxTree { get; } = syntaxTree;
 
     public void Add(TNode node)
     {
@@ -37,23 +35,24 @@ public struct SyntaxListBuilder<TNode>(SyntaxTree syntaxTree)
         var nodes = _nodes ?? [];
         if (_count == nodes.Length)
         {
-            return new SyntaxList<TNode>(SyntaxTree, nodes);
+            return new SyntaxList<TNode>(nodes);
         }
 
-        return new SyntaxList<TNode>(SyntaxTree, nodes[.._count]);
+        return new SyntaxList<TNode>(nodes[.._count]);
     }
 }
 
-public sealed class SyntaxList<TNode>(SyntaxTree syntaxTree, TNode[] nodes)
-    : SyntaxNode(syntaxTree),
-        IReadOnlyList<TNode>
+public readonly struct SyntaxList<TNode>(TNode[] nodes) : IEnumerable<TNode>
     where TNode : SyntaxNode
 {
     private readonly TNode[] _nodes = nodes;
 
+    public SyntaxList()
+        : this([]) { }
+
     public TNode this[int index] => _nodes[index];
 
-    public override Location Location
+    public Location Location
     {
         get
         {

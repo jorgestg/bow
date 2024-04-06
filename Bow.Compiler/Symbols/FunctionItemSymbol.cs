@@ -47,18 +47,20 @@ public sealed class FunctionItemSymbol(ModuleSymbol module, FunctionDefinitionSy
         var builder = ImmutableArray.CreateBuilder<ParameterSymbol>(Syntax.Parameters.Count);
         foreach (var syntax in Syntax.Parameters)
         {
-            switch (syntax)
+            switch (syntax.Kind)
             {
-                case SimpleParameterDeclarationSyntax simple:
+                case SyntaxKind.SimpleParameterDeclaration:
                 {
-                    var type = Binder.BindType(simple.Type, _diagnosticBag);
-                    var parameter = new SimpleParameterSymbol(this, simple, type);
+                    var parameterSyntax = (SimpleParameterDeclarationSyntax)syntax;
+                    var type = Binder.BindType(parameterSyntax.Type, _diagnosticBag);
+                    var parameter = new SimpleParameterSymbol(this, parameterSyntax, type);
                     builder.Add(parameter);
                     break;
                 }
 
-                case SelfParameterDeclarationSyntax self:
+                case SyntaxKind.SelfParameterDeclaration:
                 {
+                    var self = (SelfParameterDeclarationSyntax)syntax;
                     Debug.Assert(self.Type != null);
                     Debug.Assert(self.Star == null);
                     var type = Binder.BindType(self.Type, _diagnosticBag);

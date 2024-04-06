@@ -16,12 +16,12 @@ public static class SymbolFacts
             return defaultVisibility;
         }
 
-        if (token.Kind == TokenKind.Pub)
+        if (token.Kind == SyntaxKind.PubKeyword)
         {
             return SymbolAccessibility.Public;
         }
 
-        if (token.Kind == TokenKind.Mod)
+        if (token.Kind == SyntaxKind.ModKeyword)
         {
             return SymbolAccessibility.Module;
         }

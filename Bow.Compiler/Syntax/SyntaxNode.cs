@@ -4,7 +4,7 @@ public abstract class SyntaxNode(SyntaxTree syntaxTree)
 {
     public SyntaxTree SyntaxTree { get; } = syntaxTree;
     public abstract Location Location { get; }
-
+    public abstract SyntaxKind Kind { get; }
     public virtual bool IsMissing => false;
 
     public ReadOnlyMemory<char> GetText()
