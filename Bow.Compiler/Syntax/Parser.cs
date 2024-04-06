@@ -600,7 +600,7 @@ internal sealed class Parser(SyntaxFactory syntaxFactory)
     {
         ExpressionSyntax left;
         var unaryOperatorPrecedence = SyntaxFacts.GetUnaryOperatorPrecedence(_current.Kind);
-        if (unaryOperatorPrecedence >= parentPrecedence)
+        if (unaryOperatorPrecedence != 0 && unaryOperatorPrecedence >= parentPrecedence)
         {
             var operatorToken = Advance();
             var operand = ParseBinaryExpression(unaryOperatorPrecedence);
@@ -614,7 +614,7 @@ internal sealed class Parser(SyntaxFactory syntaxFactory)
         while (true)
         {
             var precedence = SyntaxFacts.GetBinaryOperatorPrecedence(_current.Kind);
-            if (precedence <= parentPrecedence)
+            if (precedence == 0 || precedence <= parentPrecedence)
             {
                 break;
             }
