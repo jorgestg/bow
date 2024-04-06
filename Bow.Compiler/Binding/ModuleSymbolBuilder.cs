@@ -27,7 +27,7 @@ public sealed class ModuleSymbolBuilder(string name, CompilationUnitSyntax root)
         _lazyRoots.Add(root);
     }
 
-    public ModuleSymbol ToModuleSymbol(PackageSymbol compilation)
+    public ModuleSymbol ToModuleSymbol(PackageSymbol package)
     {
         ImmutableArray<CompilationUnitSyntax> roots;
         if (_lazyRoots != null)
@@ -43,25 +43,6 @@ public sealed class ModuleSymbolBuilder(string name, CompilationUnitSyntax root)
             roots = [];
         }
 
-        return new ModuleSymbol(compilation, Name, roots, null);
-    }
-
-    public ModuleSymbol ToModuleSymbol(ModuleSymbol container)
-    {
-        ImmutableArray<CompilationUnitSyntax> roots;
-        if (_lazyRoots != null)
-        {
-            roots = _lazyRoots.DrainToImmutable();
-        }
-        else if (_root != null)
-        {
-            roots = [_root];
-        }
-        else
-        {
-            roots = [];
-        }
-
-        return new ModuleSymbol(container.Package, Name, roots, container);
+        return new ModuleSymbol(package, Name, roots);
     }
 }

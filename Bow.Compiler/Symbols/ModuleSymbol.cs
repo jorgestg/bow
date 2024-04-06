@@ -8,8 +8,7 @@ namespace Bow.Compiler.Symbols;
 public sealed class ModuleSymbol(
     PackageSymbol package,
     string name,
-    ImmutableArray<CompilationUnitSyntax> roots,
-    ModuleSymbol? previous
+    ImmutableArray<CompilationUnitSyntax> roots
 ) : Symbol
 {
     private readonly DiagnosticBag _diagnosticBag = new();
@@ -29,11 +28,6 @@ public sealed class ModuleSymbol(
 
     public PackageSymbol Package { get; } = package;
     public ImmutableArray<CompilationUnitSyntax> Roots { get; } = roots;
-
-    private ModuleSymbol? _lazyRoot;
-    public ModuleSymbol RootModule => _lazyRoot ??= GetRootModule();
-
-    public ModuleSymbol? Previous { get; } = previous;
 
     private ImmutableArray<TypeSymbol> _lazyTypes;
     public ImmutableArray<TypeSymbol> Types =>
@@ -152,21 +146,5 @@ public sealed class ModuleSymbol(
         }
 
         return members.ToFrozenDictionary();
-    }
-
-    private ModuleSymbol GetRootModule()
-    {
-        if (Previous == null)
-        {
-            return this;
-        }
-
-        ModuleSymbol root = Previous;
-        while (root.Previous != null)
-        {
-            root = root.Previous;
-        }
-
-        return root;
     }
 }

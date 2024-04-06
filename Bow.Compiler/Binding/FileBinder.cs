@@ -137,7 +137,7 @@ internal sealed class FileBinder : Binder
         return symbol.Accessibility switch
         {
             SymbolAccessibility.Public => true,
-            SymbolAccessibility.Module => _module.RootModule == symbol.Module.RootModule,
+            SymbolAccessibility.Module => _module == symbol.Module,
             SymbolAccessibility.File => SyntaxTree == symbol.Syntax.SyntaxTree,
             _ => false
         };

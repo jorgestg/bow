@@ -4,8 +4,7 @@ using Bow.Compiler.Syntax;
 
 namespace Bow.Compiler.Binding;
 
-internal sealed class ModuleBinder(ModuleSymbol module)
-    : Binder((Binder?)module.Previous?.Binder ?? module.Package.Binder)
+internal sealed class ModuleBinder(ModuleSymbol module) : Binder(module.Package.Binder)
 {
     private readonly ModuleSymbol _module = module;
 
