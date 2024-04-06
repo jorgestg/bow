@@ -9,7 +9,6 @@ public class FileBinderTests
     [Fact]
     public void BindType_WhenInaccessibleSymbol_ReportsDiagnostic()
     {
-        // Arrange
         var file1 = SyntaxTree.Create(
             "mod1.bow",
             """
@@ -34,12 +33,10 @@ public class FileBinderTests
 
         PackageSymbol package = new("main", [file1, file2]);
 
-        // Act
         ModuleSymbol points = package.Modules.FindByName("points")!;
         TypeSymbol point = points.Types.FindByName("Point")!;
         FunctionItemSymbol foo = points.Functions.FindByName("foo")!;
 
-        // Assert
         Assert.Same(point, foo.ReturnType);
         Assert.Single(foo.Diagnostics);
     }
@@ -47,7 +44,6 @@ public class FileBinderTests
     [Fact]
     public void BindType_WhenUsingModule_BindsType()
     {
-        // Arrange
         var file1 = SyntaxTree.Create(
             "points.bow",
             """
@@ -72,14 +68,12 @@ public class FileBinderTests
 
         PackageSymbol package = new("main", [file1, file2]);
 
-        // Act
         ModuleSymbol main = package.Modules.FindByName("main")!;
         FunctionItemSymbol foo = main.Functions.FindByName("foo")!;
 
         ModuleSymbol points = package.Modules.FindByName("points")!;
         TypeSymbol point = points.Types.FindByName("Point")!;
 
-        // Assert
         Assert.Same(point, foo.ReturnType);
     }
 }

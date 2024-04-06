@@ -80,7 +80,7 @@ public sealed class FunctionItemSymbol(ModuleSymbol module, FunctionDefinitionSy
     private TypeSymbol BindReturnType()
     {
         return Syntax.ReturnType == null
-            ? BuiltInModule.Unit
+            ? BuiltInPackage.UnitType
             : Binder.BindType(Syntax.ReturnType, _diagnosticBag);
     }
 

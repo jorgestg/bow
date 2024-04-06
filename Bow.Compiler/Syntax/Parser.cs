@@ -184,7 +184,8 @@ internal sealed class Parser(SyntaxFactory syntaxFactory)
                     {
                         _diagnostics.AddError(
                             _current,
-                            DiagnosticMessages.AccessModifierAlreadySpecified
+                            DiagnosticMessages.AccessModifierAlreadySpecified,
+                            accessModifier.ToString()
                         );
 
                         Advance();

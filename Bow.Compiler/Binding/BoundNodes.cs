@@ -13,6 +13,7 @@ internal enum BoundNodeKind
     // Expressions
     MissingExpression,
     LiteralExpression,
+    CastExpression,
     UnaryExpression,
     BinaryExpression,
 }
@@ -60,14 +61,15 @@ internal sealed class BoundExpressionStatement(
 
 internal abstract class BoundExpression : BoundNode
 {
+    public abstract override ExpressionSyntax Syntax { get; }
     public abstract TypeSymbol Type { get; }
 }
 
 internal sealed class BoundMissingExpression(MissingExpressionSyntax syntax) : BoundExpression
 {
-    public override SyntaxNode Syntax { get; } = syntax;
+    public override ExpressionSyntax Syntax { get; } = syntax;
     public override BoundNodeKind Kind => BoundNodeKind.MissingExpression;
-    public override TypeSymbol Type { get; } = new MissingTypeSymbol(syntax);
+    public override TypeSymbol Type => MissingTypeSymbol.Instance;
 }
 
 internal sealed class BoundLiteralExpression(
@@ -83,59 +85,45 @@ internal sealed class BoundLiteralExpression(
     public object Value { get; } = value;
 }
 
-internal enum BoundUnaryOperatorKind
+internal sealed class BoundCastExpression(
+    ExpressionSyntax syntax,
+    BoundExpression expression,
+    TypeSymbol type
+) : BoundExpression
 {
-    Negation,
-    LogicalNegation
+    public override ExpressionSyntax Syntax { get; } = syntax;
+    public override BoundNodeKind Kind => BoundNodeKind.CastExpression;
+    public override TypeSymbol Type { get; } = type;
+
+    public BoundExpression Expression { get; } = expression;
 }
 
 internal sealed class BoundUnaryExpression(
     UnaryExpressionSyntax syntax,
-    BoundUnaryOperatorKind op,
-    BoundExpression operand,
-    TypeSymbol type
+    BoundOperator op,
+    BoundExpression operand
 ) : BoundExpression
 {
     public override UnaryExpressionSyntax Syntax { get; } = syntax;
     public override BoundNodeKind Kind => BoundNodeKind.UnaryExpression;
-    public override TypeSymbol Type { get; } = type;
+    public override TypeSymbol Type => Operator.ResultType;
 
-    public BoundUnaryOperatorKind Operator { get; } = op;
+    public BoundOperator Operator { get; } = op;
     public BoundExpression Operand { get; } = operand;
-}
-
-internal enum BoundBinaryOperatorKind
-{
-    Multiplication,
-    Division,
-    Modulo,
-    Addition,
-    Subtraction,
-    Greater,
-    GreaterOrEqual,
-    Less,
-    LessOrEqual,
-    Equals,
-    NotEquals,
-    BitwiseAnd,
-    BitwiseOr,
-    LogicalAnd,
-    LogicalOr
 }
 
 internal sealed class BoundBinaryExpression(
     BinaryExpressionSyntax syntax,
     BoundExpression left,
-    BoundBinaryOperatorKind op,
-    BoundExpression right,
-    TypeSymbol type
+    BoundOperator op,
+    BoundExpression right
 ) : BoundExpression
 {
     public override BinaryExpressionSyntax Syntax { get; } = syntax;
     public override BoundNodeKind Kind => BoundNodeKind.BinaryExpression;
-    public override TypeSymbol Type { get; } = type;
+    public override TypeSymbol Type => Operator.ResultType;
 
     public BoundExpression Left { get; } = left;
-    public BoundBinaryOperatorKind Operator { get; } = op;
+    public BoundOperator Operator { get; } = op;
     public BoundExpression Right { get; } = right;
 }

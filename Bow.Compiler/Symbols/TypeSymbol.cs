@@ -1,5 +1,3 @@
-using Bow.Compiler.Syntax;
-
 namespace Bow.Compiler.Symbols;
 
 public enum PrimitiveTypeKind
@@ -23,20 +21,32 @@ public enum PrimitiveTypeKind
 public abstract class TypeSymbol : Symbol
 {
     public virtual PrimitiveTypeKind PrimitiveTypeKind => PrimitiveTypeKind.None;
-}
 
-public sealed class MissingTypeSymbol(SyntaxNode syntax) : TypeSymbol
-{
-    public override string Name => "???";
-    public override SyntaxNode Syntax { get; } = syntax;
-    public override ModuleSymbol Module => throw new InvalidOperationException();
-    public override bool IsMissing => true;
-}
+    /// <summary>
+    /// Determines whether a value of the current type can be assigned to a variable of the specified type without explicit casts.
+    /// </summary>
+    public bool IsAssignableTo(TypeSymbol other)
+    {
+        if (!SymbolFacts.TryUnifyTypes(this, other, out var unifiedType))
+        {
+            return false;
+        }
 
-public sealed class PointerTypeSymbol(SyntaxNode syntax, TypeSymbol type) : TypeSymbol
-{
-    public override string Name { get; } = '*' + type.Name;
-    public override SyntaxNode Syntax { get; } = syntax;
-    public override ModuleSymbol Module => throw new InvalidOperationException();
-    public TypeSymbol Type { get; } = type;
+        // If the unified type is not a numeric type we know for sure both types are the same.
+        if (!unifiedType.IsNumericType())
+        {
+            return true;
+        }
+
+        // For numeric types more we need to do additional checks because type unification promotes types.
+        var otherAsPrimitive = (PrimitiveTypeSymbol)other;
+        var unifiedTypeAsPrimitive = (PrimitiveTypeSymbol)unifiedType;
+
+        Debug.Assert(otherAsPrimitive.IsFloat() && unifiedTypeAsPrimitive.IsFloat());
+        Debug.Assert(!otherAsPrimitive.IsFloat() && !unifiedTypeAsPrimitive.IsFloat());
+        Debug.Assert(otherAsPrimitive.IsUnsigned() && unifiedTypeAsPrimitive.IsUnsigned());
+        Debug.Assert(!otherAsPrimitive.IsUnsigned() && !unifiedTypeAsPrimitive.IsUnsigned());
+
+        return otherAsPrimitive.GetSizeInBytes() >= unifiedTypeAsPrimitive.GetSizeInBytes();
+    }
 }

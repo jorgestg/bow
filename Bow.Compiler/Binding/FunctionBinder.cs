@@ -67,59 +67,38 @@ internal sealed class FunctionBinder(FunctionSymbol function) : Binder(GetParent
         };
     }
 
+    private static BoundExpression CreateImplicitCastExpression(
+        BoundExpression expression,
+        TypeSymbol type
+    )
+    {
+        return expression.Type == type
+            ? expression
+            : new BoundCastExpression(expression.Syntax, expression, type);
+    }
+
     private BoundUnaryExpression BindUnaryExpression(
         UnaryExpressionSyntax syntax,
         DiagnosticBag diagnostics
     )
     {
         var operand = BindExpression(syntax.Operand, diagnostics);
-        var (@operator, type) = BindUnaryOperator(syntax, operand.Type, diagnostics);
-        return new BoundUnaryExpression(syntax, @operator, operand, type);
-    }
-
-    private static (BoundUnaryOperatorKind, TypeSymbol) BindUnaryOperator(
-        UnaryExpressionSyntax syntax,
-        TypeSymbol operandType,
-        DiagnosticBag diagnostics
-    )
-    {
-        switch (syntax.Kind)
+        var @operator = BoundOperator.UnaryOperatorFor(syntax.Operator.Kind, operand.Type);
+        if (@operator.OperandType == MissingTypeSymbol.Instance)
         {
-            case SyntaxKind.MinusToken:
-            {
-                if (!operandType.IsNumericType())
-                {
-                    diagnostics.AddError(
-                        syntax,
-                        DiagnosticMessages.UnaryOperatorTypeMismatch,
-                        SyntaxFacts.GetKindDisplayText(syntax.Kind),
-                        operandType.Name
-                    );
-
-                    operandType = new MissingTypeSymbol(syntax);
-                }
-
-                return (BoundUnaryOperatorKind.Negation, operandType);
-            }
-
-            case SyntaxKind.NotKeyword:
-            {
-                if (operandType != BuiltInModule.Bool)
-                {
-                    diagnostics.AddError(
-                        syntax,
-                        DiagnosticMessages.UnaryOperatorTypeMismatch,
-                        SyntaxFacts.GetKindDisplayText(syntax.Kind),
-                        BuiltInModule.Bool.Name
-                    );
-                }
-
-                return (BoundUnaryOperatorKind.LogicalNegation, BuiltInModule.Bool);
-            }
-
-            default:
-                throw new UnreachableException();
+            diagnostics.AddError(
+                syntax.Operator,
+                DiagnosticMessages.UnaryOperatorTypeMismatch,
+                SyntaxFacts.GetKindDisplayText(syntax.Operator.Kind),
+                operand.Type.Name
+            );
         }
+        else
+        {
+            operand = CreateImplicitCastExpression(operand, @operator.OperandType);
+        }
+
+        return new BoundUnaryExpression(syntax, @operator, operand);
     }
 
     private BoundBinaryExpression BindBinaryExpression(
@@ -129,142 +108,39 @@ internal sealed class FunctionBinder(FunctionSymbol function) : Binder(GetParent
     {
         var left = BindExpression(syntax.Left, diagnostics);
         var right = BindExpression(syntax.Right, diagnostics);
-        var (@operator, type) = BindBinaryOperator(syntax, left.Type, right.Type, diagnostics);
-        return new BoundBinaryExpression(syntax, left, @operator, right, type);
-    }
+        var @operator = BoundOperator.BinaryOperatorFor(
+            syntax.Operator.Kind,
+            left.Type,
+            right.Type
+        );
 
-    private static (BoundBinaryOperatorKind, TypeSymbol) BindBinaryOperator(
-        BinaryExpressionSyntax syntax,
-        TypeSymbol leftType,
-        TypeSymbol rightType,
-        DiagnosticBag diagnostics
-    )
-    {
-        var kind = syntax.Kind switch
+        if (@operator.ResultType.IsMissing)
         {
-            SyntaxKind.StarToken => BoundBinaryOperatorKind.Multiplication,
-            SyntaxKind.SlashToken => BoundBinaryOperatorKind.Division,
-            SyntaxKind.PercentToken => BoundBinaryOperatorKind.Modulo,
-            SyntaxKind.PlusToken => BoundBinaryOperatorKind.Addition,
-            SyntaxKind.MinusToken => BoundBinaryOperatorKind.Subtraction,
-            SyntaxKind.GreaterThanToken => BoundBinaryOperatorKind.Greater,
-            SyntaxKind.GreaterThanEqualsToken => BoundBinaryOperatorKind.GreaterOrEqual,
-            SyntaxKind.LessThanToken => BoundBinaryOperatorKind.Less,
-            SyntaxKind.LessThanEqualsToken => BoundBinaryOperatorKind.LessOrEqual,
-            SyntaxKind.EqualsEqualsToken => BoundBinaryOperatorKind.Equals,
-            SyntaxKind.DiamondToken => BoundBinaryOperatorKind.NotEquals,
-            SyntaxKind.AmpersandToken => BoundBinaryOperatorKind.BitwiseAnd,
-            SyntaxKind.PipeToken => BoundBinaryOperatorKind.BitwiseOr,
-            _ => throw new UnreachableException()
-        };
-
-        switch (kind)
-        {
-            case BoundBinaryOperatorKind.Multiplication:
-            case BoundBinaryOperatorKind.Division:
-            case BoundBinaryOperatorKind.Modulo:
-            case BoundBinaryOperatorKind.Addition:
-            case BoundBinaryOperatorKind.Subtraction:
-            {
-                if (!leftType.IsNumericType() || !rightType.IsNumericType())
-                {
-                    diagnostics.AddError(
-                        syntax,
-                        DiagnosticMessages.BinaryOperatorTypeMismatch,
-                        SyntaxFacts.GetKindDisplayText(syntax.Kind),
-                        leftType.Name,
-                        rightType.Name
-                    );
-
-                    return (kind, new MissingTypeSymbol(syntax));
-                }
-
-                return (kind, leftType);
-            }
-
-            case BoundBinaryOperatorKind.Greater:
-            case BoundBinaryOperatorKind.GreaterOrEqual:
-            case BoundBinaryOperatorKind.Less:
-            case BoundBinaryOperatorKind.LessOrEqual:
-            {
-                if (!leftType.IsNumericType() || !rightType.IsNumericType())
-                {
-                    diagnostics.AddError(
-                        syntax,
-                        DiagnosticMessages.BinaryOperatorTypeMismatch,
-                        SyntaxFacts.GetKindDisplayText(syntax.Kind),
-                        leftType.Name,
-                        rightType.Name
-                    );
-
-                    return (kind, new MissingTypeSymbol(syntax));
-                }
-
-                return (kind, BuiltInModule.Bool);
-            }
-
-            case BoundBinaryOperatorKind.Equals:
-            case BoundBinaryOperatorKind.NotEquals:
-            {
-                if (leftType != rightType)
-                {
-                    diagnostics.AddError(
-                        syntax,
-                        DiagnosticMessages.BinaryOperatorTypeMismatch,
-                        SyntaxFacts.GetKindDisplayText(syntax.Kind),
-                        leftType.Name,
-                        rightType.Name
-                    );
-
-                    return (kind, new MissingTypeSymbol(syntax));
-                }
-
-                return (kind, BuiltInModule.Bool);
-            }
-
-            case BoundBinaryOperatorKind.BitwiseAnd:
-            case BoundBinaryOperatorKind.BitwiseOr:
-            {
-                if (leftType != BuiltInModule.Signed32 || rightType != BuiltInModule.Signed32)
-                {
-                    diagnostics.AddError(
-                        syntax,
-                        DiagnosticMessages.BinaryOperatorTypeMismatch,
-                        SyntaxFacts.GetKindDisplayText(syntax.Kind),
-                        leftType.Name,
-                        rightType.Name
-                    );
-
-                    return (kind, new MissingTypeSymbol(syntax));
-                }
-
-                return (kind, BuiltInModule.Signed32);
-            }
-
-            default:
-                throw new UnreachableException();
+            diagnostics.AddError(
+                syntax.Operator,
+                DiagnosticMessages.BinaryOperatorTypeMismatch,
+                SyntaxFacts.GetKindDisplayText(syntax.Operator.Kind),
+                left.Type.Name,
+                right.Type.Name
+            );
         }
+        else
+        {
+            left = CreateImplicitCastExpression(left, @operator.OperandType);
+            right = CreateImplicitCastExpression(right, @operator.OperandType);
+        }
+
+        return new BoundBinaryExpression(syntax, left, @operator, right);
     }
 
     private static FileBinder GetParentBinder(FunctionSymbol function)
     {
-        switch (function)
+        return function switch
         {
-            case FunctionItemSymbol i:
-                return GetFileBinder(i);
-
-            case MethodSymbol m:
-            {
-                return m.Container switch
-                {
-                    EnumSymbol e => GetFileBinder(e),
-                    StructSymbol s => GetFileBinder(s),
-                    _ => throw new UnreachableException()
-                };
-            }
-        }
-
-        throw new UnreachableException();
+            FunctionItemSymbol i => GetFileBinder(i),
+            MethodSymbol m => GetFileBinder((IItemSymbol)m.Container),
+            _ => throw new UnreachableException(),
+        };
     }
 
     private BoundReturnStatement BindReturnStatement(
@@ -274,7 +150,7 @@ internal sealed class FunctionBinder(FunctionSymbol function) : Binder(GetParent
     {
         if (syntax.Expression == null)
         {
-            if (_function.ReturnType != BuiltInModule.Unit)
+            if (_function.ReturnType != BuiltInPackage.UnitType)
             {
                 diagnostics.AddError(
                     syntax.Keyword,
@@ -287,7 +163,7 @@ internal sealed class FunctionBinder(FunctionSymbol function) : Binder(GetParent
         }
 
         var expression = BindExpression(syntax.Expression, diagnostics);
-        if (expression.Type != _function.ReturnType)
+        if (!expression.Type.IsAssignableTo(_function.ReturnType))
         {
             diagnostics.AddError(
                 syntax.Expression,
@@ -295,6 +171,10 @@ internal sealed class FunctionBinder(FunctionSymbol function) : Binder(GetParent
                 _function.ReturnType.Name,
                 expression.Type.Name
             );
+        }
+        else
+        {
+            expression = CreateImplicitCastExpression(expression, _function.ReturnType);
         }
 
         return new BoundReturnStatement(syntax, expression);
@@ -316,8 +196,8 @@ internal sealed class FunctionBinder(FunctionSymbol function) : Binder(GetParent
     {
         TypeSymbol type = syntax.Literal.Kind switch
         {
-            SyntaxKind.TrueKeyword or SyntaxKind.FalseKeyword => BuiltInModule.Bool,
-            SyntaxKind.IntegerLiteral => BuiltInModule.Signed32,
+            SyntaxKind.TrueKeyword or SyntaxKind.FalseKeyword => BuiltInPackage.BoolType,
+            SyntaxKind.IntegerLiteral => BuiltInPackage.Signed32Type,
             _ => throw new UnreachableException()
         };
 
@@ -342,7 +222,7 @@ internal sealed class FunctionBinder(FunctionSymbol function) : Binder(GetParent
         diagnostics.AddError(
             literal,
             DiagnosticMessages.IntegerIsTooLargeForSize,
-            BuiltInModule.Signed32.Name
+            BuiltInPackage.Signed32Type.Name
         );
 
         return 0;

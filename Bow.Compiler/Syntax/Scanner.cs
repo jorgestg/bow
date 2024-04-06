@@ -44,11 +44,11 @@ internal sealed class Scanner(SyntaxFactory syntaxFactory)
             '+' => CreateToken(SyntaxKind.PlusToken),
             '-' => CreateToken(SyntaxKind.MinusToken),
             '%' => CreateToken(SyntaxKind.PercentToken),
-            '=' => CreateCompoundToken('=', SyntaxKind.EqualsEqualsToken, SyntaxKind.EqualsToken),
+            '=' => CreateCompoundToken('=', SyntaxKind.EqualEqualToken, SyntaxKind.EqualsToken),
             '>'
                 => CreateCompoundToken(
                     '=',
-                    SyntaxKind.GreaterThanEqualsToken,
+                    SyntaxKind.GreaterThanEqualToken,
                     SyntaxKind.GreaterThanToken
                 ),
 
@@ -57,7 +57,7 @@ internal sealed class Scanner(SyntaxFactory syntaxFactory)
                     ? CreateToken(SyntaxKind.DiamondToken)
                     : CreateCompoundToken(
                         '=',
-                        SyntaxKind.LessThanEqualsToken,
+                        SyntaxKind.LessThanEqualToken,
                         SyntaxKind.LessThanToken
                     ),
 

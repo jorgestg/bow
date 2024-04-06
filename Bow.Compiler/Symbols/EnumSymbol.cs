@@ -62,7 +62,7 @@ public sealed class EnumSymbol(ModuleSymbol module, EnumDefinitionSyntax syntax)
         {
             var returnType =
                 syntax.ReturnType == null
-                    ? BuiltInModule.Unit
+                    ? BuiltInPackage.UnitType
                     : binder.BindType(syntax.ReturnType, _diagnosticBag);
 
             MethodSymbol method = new(this, syntax, returnType);

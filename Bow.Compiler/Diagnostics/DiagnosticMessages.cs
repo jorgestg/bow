@@ -11,7 +11,10 @@ internal static class DiagnosticMessages
     public const string SymbolIsNotAccessible = "'{0}' is not accessible from this context.";
     public const string TokenMismatch = "'{0}' expected, but got '{1}'.";
     public const string TypeNameExpected = "Type name expected.";
-    public const string AccessModifierAlreadySpecified = "Access modifier already specified.";
+
+    public const string AccessModifierAlreadySpecified =
+        "The access modifier '{0}' is already present.";
+
     public const string ItemExpected = "Type or function expected.";
     public const string MemberExpected = "Field or method expected.";
 

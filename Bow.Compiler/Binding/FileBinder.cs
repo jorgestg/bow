@@ -59,18 +59,18 @@ internal sealed class FileBinder : Binder
             {
                 return ((KeywordTypeReferenceSyntax)syntax).Keyword.Kind switch
                 {
-                    SyntaxKind.F32Keyword => BuiltInModule.Float32,
-                    SyntaxKind.F64Keyword => BuiltInModule.Float64,
-                    SyntaxKind.NeverKeyword => BuiltInModule.Never,
-                    SyntaxKind.S8Keyword => BuiltInModule.Signed8,
-                    SyntaxKind.S16Keyword => BuiltInModule.Signed16,
-                    SyntaxKind.S32Keyword => BuiltInModule.Signed32,
-                    SyntaxKind.S64Keyword => BuiltInModule.Signed64,
-                    SyntaxKind.UnitKeyword => BuiltInModule.Unit,
-                    SyntaxKind.U8Keyword => BuiltInModule.Unsigned8,
-                    SyntaxKind.U16Keyword => BuiltInModule.Unsigned16,
-                    SyntaxKind.U32Keyword => BuiltInModule.Unsigned32,
-                    SyntaxKind.U64Keyword => BuiltInModule.Unsigned64,
+                    SyntaxKind.F32Keyword => BuiltInPackage.Float32Type,
+                    SyntaxKind.F64Keyword => BuiltInPackage.Float64Type,
+                    SyntaxKind.NeverKeyword => BuiltInPackage.NeverType,
+                    SyntaxKind.S8Keyword => BuiltInPackage.Signed8Type,
+                    SyntaxKind.S16Keyword => BuiltInPackage.Signed16Type,
+                    SyntaxKind.S32Keyword => BuiltInPackage.Signed32Type,
+                    SyntaxKind.S64Keyword => BuiltInPackage.Signed64Type,
+                    SyntaxKind.UnitKeyword => BuiltInPackage.UnitType,
+                    SyntaxKind.U8Keyword => BuiltInPackage.Unsigned8Type,
+                    SyntaxKind.U16Keyword => BuiltInPackage.Unsigned16Type,
+                    SyntaxKind.U32Keyword => BuiltInPackage.Unsigned32Type,
+                    SyntaxKind.U64Keyword => BuiltInPackage.Unsigned64Type,
                     _ => throw new UnreachableException()
                 };
             }
@@ -97,13 +97,13 @@ internal sealed class FileBinder : Binder
                     namedType.Name.ToString()
                 );
 
-                return new MissingTypeSymbol(namedType.Name);
+                return MissingTypeSymbol.Instance;
             }
 
             case SyntaxKind.MissingTypeReference:
             {
                 // Diagnostic already reported
-                return new MissingTypeSymbol(syntax);
+                return MissingTypeSymbol.Instance;
             }
         }
 
