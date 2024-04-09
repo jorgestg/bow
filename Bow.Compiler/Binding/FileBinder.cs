@@ -97,13 +97,13 @@ internal sealed class FileBinder : Binder
                     namedType.Name.ToString()
                 );
 
-                return MissingTypeSymbol.Instance;
+                return PlaceholderTypeSymbol.UnknownType;
             }
 
             case SyntaxKind.MissingTypeReference:
             {
                 // Diagnostic already reported
-                return MissingTypeSymbol.Instance;
+                return PlaceholderTypeSymbol.UnknownType;
             }
         }
 
@@ -121,7 +121,7 @@ internal sealed class FileBinder : Binder
 
         if (symbol == null)
         {
-            return new MissingSymbol(syntax);
+            return MissingSymbol.Instance;
         }
 
         if (!IsAccessible(symbol))
@@ -153,7 +153,7 @@ internal sealed class FileBinder : Binder
         }
 
         diagnostics.AddError(syntax, DiagnosticMessages.NameNotFound, name);
-        return new MissingSymbol(syntax);
+        return MissingSymbol.Instance;
     }
 
     private Symbol? BindQualifiedName(QualifiedNameSyntax syntax, DiagnosticBag diagnostics)

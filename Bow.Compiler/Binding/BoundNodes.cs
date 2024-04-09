@@ -9,10 +9,13 @@ internal enum BoundNodeKind
     BlockStatement,
     ExpressionStatement,
     ReturnStatement,
+    IfStatement,
 
     // Expressions
     MissingExpression,
     LiteralExpression,
+    IdentifierExpression,
+    CallExpression,
     CastExpression,
     UnaryExpression,
     BinaryExpression,
@@ -59,6 +62,29 @@ internal sealed class BoundExpressionStatement(
     public BoundExpression Expression { get; } = expression;
 }
 
+internal sealed class BoundIfStatement(
+    IfStatementSyntax syntax,
+    BoundExpression condition,
+    BoundBlockStatement then,
+    ImmutableArray<BoundIfElseClause> elseIfs,
+    BoundBlockStatement? @else
+) : BoundStatement
+{
+    public override IfStatementSyntax Syntax { get; } = syntax;
+    public override BoundNodeKind Kind => BoundNodeKind.IfStatement;
+
+    public BoundExpression Condition { get; } = condition;
+    public BoundBlockStatement Then { get; } = then;
+    public ImmutableArray<BoundIfElseClause> ElseIfs { get; } = elseIfs;
+    public BoundBlockStatement? Else { get; } = @else;
+}
+
+internal readonly struct BoundIfElseClause(BoundExpression condition, BoundBlockStatement block)
+{
+    public BoundExpression Condition { get; } = condition;
+    public BoundBlockStatement Block { get; } = block;
+}
+
 internal abstract class BoundExpression : BoundNode
 {
     public abstract override ExpressionSyntax Syntax { get; }
@@ -69,7 +95,7 @@ internal sealed class BoundMissingExpression(MissingExpressionSyntax syntax) : B
 {
     public override ExpressionSyntax Syntax { get; } = syntax;
     public override BoundNodeKind Kind => BoundNodeKind.MissingExpression;
-    public override TypeSymbol Type => MissingTypeSymbol.Instance;
+    public override TypeSymbol Type => PlaceholderTypeSymbol.UnknownType;
 }
 
 internal sealed class BoundLiteralExpression(
@@ -83,6 +109,48 @@ internal sealed class BoundLiteralExpression(
     public override TypeSymbol Type { get; } = type;
 
     public object Value { get; } = value;
+}
+
+internal sealed class BoundIdentifierExpression(
+    IdentifierExpressionSyntax syntax,
+    Symbol referencedSymbol
+) : BoundExpression
+{
+    public override IdentifierExpressionSyntax Syntax { get; } = syntax;
+    public override BoundNodeKind Kind => BoundNodeKind.IdentifierExpression;
+    public override TypeSymbol Type
+    {
+        get
+        {
+            return ReferencedSymbol switch
+            {
+                TypeSymbol => PlaceholderTypeSymbol.MetaType,
+                EnumCaseSymbol e => e.Enum,
+                FieldSymbol f => f.Type,
+                FunctionSymbol f => f.Type,
+                ModuleSymbol => PlaceholderTypeSymbol.ModuleType,
+                PackageSymbol => PlaceholderTypeSymbol.PackageType,
+                ParameterSymbol p => p.Type,
+                _ => throw new UnreachableException()
+            };
+        }
+    }
+
+    public Symbol ReferencedSymbol { get; } = referencedSymbol;
+}
+
+internal sealed class BoundCallExpression(
+    CallExpressionSyntax syntax,
+    FunctionSymbol function,
+    ImmutableArray<BoundExpression> arguments
+) : BoundExpression
+{
+    public override CallExpressionSyntax Syntax { get; } = syntax;
+    public override BoundNodeKind Kind => BoundNodeKind.CallExpression;
+    public override TypeSymbol Type => Function.ReturnType;
+
+    public FunctionSymbol Function { get; } = function;
+    public ImmutableArray<BoundExpression> Arguments { get; } = arguments;
 }
 
 internal sealed class BoundCastExpression(

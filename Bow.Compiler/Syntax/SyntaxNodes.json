@@ -186,8 +186,53 @@
         "Expression": { "type": "Expression", "optional": true }
       }
     },
+    "IfStatement": {
+      "extends": "Statement",
+      "children": {
+        "Keyword": "Token",
+        "Condition": "Expression",
+        "Then": "BlockStatement",
+        "ElseIfs": { "type": "ElseIfClause", "array": true },
+        "Else": { "type": "ElseClause", "optional": true }
+      }
+    },
+    "ElseIfClause": {
+      "children": {
+        "ElseKeyword": "Token",
+        "IfKeyword": "Token",
+        "Condition": "Expression",
+        "Body": "BlockStatement"
+      }
+    },
+    "ElseClause": {
+      "children": {
+        "ElseKeyword": "Token",
+        "Body": "BlockStatement"
+      }
+    },
     "Expression": {
       "abstract": true
+    },
+    "LiteralExpression": {
+      "extends": "Expression",
+      "children": {
+        "Literal": "Token"
+      }
+    },
+    "IdentifierExpression": {
+      "extends": "Expression",
+      "children": {
+        "Identifier": "IdentifierToken"
+      }
+    },
+    "CallExpression": {
+      "extends": "Expression",
+      "children": {
+        "Expression": "Expression",
+        "OpenParenthesis": "Token",
+        "Arguments": { "type": "Expression", "array": true },
+        "CloseParenthesis": "Token"
+      }
     },
     "UnaryExpression": {
       "extends": "Expression",
@@ -202,12 +247,6 @@
         "Left": "Expression",
         "Operator": "Token",
         "Right": "Expression"
-      }
-    },
-    "LiteralExpression": {
-      "extends": "Expression",
-      "children": {
-        "Literal": "Token"
       }
     }
   }

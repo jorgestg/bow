@@ -34,11 +34,18 @@ parameter-declaration = 'mut'? (ID type-reference | '*'? 'self')
 block = '{' (statements NL)? '}'
 
 statements = statement (NL statement)*
-statement = return-expression | expression
+statement = return-statement | if-statement | expression
 return-statement = 'return' expression
+if-statement = 'if' expression block ('else' 'if' expression block)* ('else' block)?
 
-expression = literal | unary-expression | binary-expression
+expression = primary-expression | call-expression | unary-expression | binary-expression
+primary-expression = literal | identifier-expression
 literal = INT | 'true' | 'false'
+identifier-expression = ID
+
+call-expression = primary-expression '(' arguments? ')'
+arguments = expression ((',' expression)+ ','?)? 
+
 unary-expression = ('not' | '-') expression
 binary-expression = expression (
     '*' | '/' | '%'

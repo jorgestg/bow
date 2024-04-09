@@ -155,6 +155,7 @@ internal sealed class Scanner(SyntaxFactory syntaxFactory)
         return span switch
         {
             "and" => CreateToken(SyntaxKind.AndKeyword),
+            "else" => CreateToken(SyntaxKind.ElseKeyword),
             "enum" => CreateToken(SyntaxKind.EnumKeyword),
             "false" => CreateToken(SyntaxKind.FalseKeyword),
             "f32" => CreateToken(SyntaxKind.F32Keyword),
@@ -162,6 +163,7 @@ internal sealed class Scanner(SyntaxFactory syntaxFactory)
             "fun" => CreateToken(SyntaxKind.FunKeyword),
             "mod" => CreateToken(SyntaxKind.ModKeyword),
             "mut" => CreateToken(SyntaxKind.MutKeyword),
+            "if" => CreateToken(SyntaxKind.IfKeyword),
             "never" => CreateToken(SyntaxKind.NeverKeyword),
             "not" => CreateToken(SyntaxKind.NotKeyword),
             "or" => CreateToken(SyntaxKind.OrKeyword),

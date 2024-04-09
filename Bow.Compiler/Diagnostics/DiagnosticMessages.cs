@@ -37,4 +37,8 @@ internal static class DiagnosticMessages
 
     public const string BinaryOperatorTypeMismatch =
         "Cannot apply operator '{0}' to operands of type '{1}' and '{2}'.";
+
+    public const string ExpressionNotCallable = "Expression is not callable.";
+
+    public const string ArgumentCountMismatch = "Expected {0} arguments, but got {1}.";
 }

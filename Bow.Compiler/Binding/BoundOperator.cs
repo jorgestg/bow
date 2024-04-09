@@ -53,7 +53,7 @@ internal readonly struct BoundOperator
             resultType =
                 operandType == BuiltInPackage.BoolType
                     ? BuiltInPackage.BoolType
-                    : MissingTypeSymbol.Instance;
+                    : PlaceholderTypeSymbol.UnknownType;
         }
         else
         {
@@ -63,7 +63,7 @@ internal readonly struct BoundOperator
             resultType =
                 operandType.IsNumericType() && !((PrimitiveTypeSymbol)operandType).IsUnsigned()
                     ? operandType
-                    : MissingTypeSymbol.Instance;
+                    : PlaceholderTypeSymbol.UnknownType;
         }
 
         return new BoundOperator(kind, operandType: resultType, resultType);
@@ -95,8 +95,8 @@ internal readonly struct BoundOperator
             _ => throw new UnreachableException()
         };
 
-        TypeSymbol operandType = MissingTypeSymbol.Instance;
-        TypeSymbol resultType = MissingTypeSymbol.Instance;
+        TypeSymbol operandType = PlaceholderTypeSymbol.UnknownType;
+        TypeSymbol resultType = PlaceholderTypeSymbol.UnknownType;
         switch (operatorKind)
         {
             case BoundOperatorKind.Multiplication:
@@ -106,8 +106,7 @@ internal readonly struct BoundOperator
             case BoundOperatorKind.Subtraction:
             {
                 if (
-                    SymbolFacts.TryUnifyTypes(leftType, rightType, out var unifiedType)
-                    && unifiedType.IsNumericType()
+                    leftType.TryUnify(rightType, out var unifiedType) && unifiedType.IsNumericType()
                 )
                 {
                     operandType = unifiedType;
@@ -123,8 +122,7 @@ internal readonly struct BoundOperator
             case BoundOperatorKind.LessOrEqual:
             {
                 if (
-                    SymbolFacts.TryUnifyTypes(leftType, rightType, out var unifiedType)
-                    && unifiedType.IsNumericType()
+                    leftType.TryUnify(rightType, out var unifiedType) && unifiedType.IsNumericType()
                 )
                 {
                     operandType = unifiedType;
@@ -137,7 +135,7 @@ internal readonly struct BoundOperator
             case BoundOperatorKind.Equals:
             case BoundOperatorKind.NotEquals:
             {
-                if (SymbolFacts.TryUnifyTypes(leftType, rightType, out var unifiedType))
+                if (leftType.TryUnify(rightType, out var unifiedType))
                 {
                     operandType = unifiedType;
                     resultType = BuiltInPackage.BoolType;
@@ -152,7 +150,7 @@ internal readonly struct BoundOperator
             case BoundOperatorKind.BitwiseAnd:
             case BoundOperatorKind.BitwiseOr:
             {
-                if (!SymbolFacts.TryUnifyTypes(leftType, rightType, out var unifiedType))
+                if (!leftType.TryUnify(rightType, out var unifiedType))
                 {
                     break;
                 }
@@ -173,7 +171,7 @@ internal readonly struct BoundOperator
                     or PrimitiveTypeKind.Unsigned16
                         => BuiltInPackage.Unsigned32Type,
 
-                    _ => MissingTypeSymbol.Instance
+                    _ => PlaceholderTypeSymbol.UnknownType
                 };
 
                 operandType = unifiedType;

@@ -9,11 +9,13 @@ public enum SyntaxKind
 
     // Keyword tokens
     AndKeyword,
+    ElseKeyword,
     EnumKeyword,
     FalseKeyword,
     F32Keyword,
     F64Keyword,
     FunKeyword,
+    IfKeyword,
     ModKeyword,
     MutKeyword,
     NeverKeyword,
@@ -95,10 +97,15 @@ public enum SyntaxKind
     BlockStatement,
     ExpressionStatement,
     ReturnStatement,
+    IfStatement,
+    ElseIfClause,
+    ElseClause,
 
     // Expression nodes
     MissingExpression,
     LiteralExpression,
+    IdentifierExpression,
+    CallExpression,
     UnaryExpression,
     BinaryExpression,
 }

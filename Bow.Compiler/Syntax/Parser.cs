@@ -444,25 +444,24 @@ internal sealed class Parser(SyntaxFactory syntaxFactory)
     private SyntaxList<ParameterDeclarationSyntax> ParseParameterDeclarations()
     {
         SyntaxListBuilder<ParameterDeclarationSyntax> parameters = new();
-        while (true)
+
+        while (
+            _current.Kind is not SyntaxKind.CloseParenthesisToken and not SyntaxKind.EndOfFileToken
+        )
         {
-            switch (_current.Kind)
+            var parameter = ParseParameterDeclaration();
+            parameters.Add(parameter);
+
+            if (_current.Kind == SyntaxKind.CommaToken)
             {
-                case SyntaxKind.EndOfFileToken:
-                case SyntaxKind.CloseParenthesisToken:
-                case SyntaxKind.OpenBraceToken:
-                    return parameters.ToSyntaxList();
-
-                default:
-                    parameters.Add(ParseParameterDeclaration());
-                    if (_current.Kind == SyntaxKind.CommaToken)
-                    {
-                        Advance();
-                    }
-
-                    continue;
+                Advance();
+                continue;
             }
+
+            break;
         }
+
+        return parameters.ToSyntaxList();
     }
 
     // parameter-declaration = simple-parameter-declaration | self-parameter-declaration
@@ -503,6 +502,8 @@ internal sealed class Parser(SyntaxFactory syntaxFactory)
     // block = '{' (statements NL)? '}'
     private BlockStatementSyntax ParseBlock()
     {
+        SyntaxListBuilder<StatementSyntax> statements = new();
+
         if (_current.Kind == SyntaxKind.NewLineToken)
         {
             _diagnostics.AddError(_current, DiagnosticMessages.BraceShouldGoOnTheSameLine);
@@ -510,56 +511,28 @@ internal sealed class Parser(SyntaxFactory syntaxFactory)
         }
 
         var openBrace = Match(SyntaxKind.OpenBraceToken);
-        if (_current.Kind == SyntaxKind.CloseBraceToken)
-        {
-            return _syntaxFactory.BlockStatement(
-                openBrace,
-                new SyntaxList<StatementSyntax>(),
-                Match(SyntaxKind.CloseBraceToken)
-            );
-        }
-
         MatchNewLine();
 
-        var statements = ParseStatements();
-        var closeBrace = Match(SyntaxKind.CloseBraceToken);
-        return _syntaxFactory.BlockStatement(openBrace, statements, closeBrace);
-    }
-
-    // statements = statement (NL statement)*
-    private SyntaxList<StatementSyntax> ParseStatements()
-    {
-        SyntaxListBuilder<StatementSyntax> statements = new();
-
-        while (true)
+        while (_current.Kind is not SyntaxKind.EndOfFileToken and not SyntaxKind.CloseBraceToken)
         {
-            switch (_current.Kind)
+            var startToken = _current;
+
+            var statement = ParseStatement();
+            statements.Add(statement);
+
+            // Avoid infinite loop
+            if (_current == startToken)
             {
-                case SyntaxKind.EndOfFileToken:
-                case SyntaxKind.CloseBraceToken:
-                    return statements.ToSyntaxList();
-
-                default:
-                {
-                    var startToken = _current;
-                    statements.Add(ParseStatement());
-                    MatchNewLine();
-
-                    // If ParseStatement() did not consume any tokens,
-                    // we need to skip the current token and continue
-                    // in order to avoid an infinite loop.
-                    if (_current == startToken)
-                    {
-                        Advance();
-                    }
-
-                    continue;
-                }
+                Advance();
+                continue;
             }
         }
+
+        var closeBrace = Match(SyntaxKind.CloseBraceToken);
+        return _syntaxFactory.BlockStatement(openBrace, statements.ToSyntaxList(), closeBrace);
     }
 
-    // statement = return-expression
+    // statement = return-statement | if-statement | expression
     private StatementSyntax ParseStatement()
     {
         switch (_current.Kind)
@@ -567,10 +540,65 @@ internal sealed class Parser(SyntaxFactory syntaxFactory)
             case SyntaxKind.ReturnKeyword:
                 return ParseReturnStatement();
 
+            case SyntaxKind.IfKeyword:
+                return ParseIfStatement();
+
             default:
                 var expression = ParseExpression();
+                MatchNewLine();
                 return _syntaxFactory.ExpressionStatement(expression);
         }
+    }
+
+    // if-statement = 'if' expression block ('else' 'if' expression block)* ('else' block)?
+    private IfStatementSyntax ParseIfStatement()
+    {
+        var ifKeyword = Match(SyntaxKind.IfKeyword);
+        var condition = ParseExpression();
+        var thenBlock = ParseBlock();
+        if (_current.Kind != SyntaxKind.ElseKeyword)
+        {
+            return _syntaxFactory.IfStatement(
+                ifKeyword,
+                condition,
+                thenBlock,
+                new SyntaxList<ElseIfClauseSyntax>(),
+                null
+            );
+        }
+
+        SyntaxListBuilder<ElseIfClauseSyntax> elseIfClauses = new();
+        while (_current.Kind == SyntaxKind.ElseKeyword)
+        {
+            var elseKeyword = Advance();
+            var elseIfKeyword = Match(SyntaxKind.IfKeyword);
+            var elseIfCondition = ParseExpression();
+            var elseIfBlock = ParseBlock();
+            elseIfClauses.Add(
+                _syntaxFactory.ElseIfClause(
+                    elseKeyword,
+                    elseIfKeyword,
+                    elseIfCondition,
+                    elseIfBlock
+                )
+            );
+        }
+
+        ElseClauseSyntax? elseClause = null;
+        if (_current.Kind == SyntaxKind.ElseKeyword)
+        {
+            var elseKeyword = Advance();
+            var elseBlock = ParseBlock();
+            elseClause = _syntaxFactory.ElseClause(elseKeyword, elseBlock);
+        }
+
+        return _syntaxFactory.IfStatement(
+            ifKeyword,
+            condition,
+            thenBlock,
+            elseIfClauses.ToSyntaxList(),
+            elseClause
+        );
     }
 
     // return-statement = 'return' expression
@@ -578,15 +606,17 @@ internal sealed class Parser(SyntaxFactory syntaxFactory)
     {
         var returnKeyword = Match(SyntaxKind.ReturnKeyword);
         var expression = ParseExpression();
+        MatchNewLine();
         return _syntaxFactory.ReturnStatement(returnKeyword, expression);
     }
 
-    // expression = literal | unary-expression | binary-expression
+    // expression = literal | identifier-expression | call-expression | unary-expression | binary-expression
     private ExpressionSyntax ParseExpression()
     {
         return ParseBinaryExpression();
     }
 
+    // unary-expression = ('not' | '-') expression
     // binary-expression = expression (
     //     '*' | '/' | '%'
     //     | '+' | '-'
@@ -609,7 +639,7 @@ internal sealed class Parser(SyntaxFactory syntaxFactory)
         }
         else
         {
-            left = ParseLiteral();
+            left = ParseCallExpression();
         }
 
         while (true)
@@ -628,8 +658,53 @@ internal sealed class Parser(SyntaxFactory syntaxFactory)
         return left;
     }
 
+    // call-expression = primary-expression '(' arguments? ')'
+    // arguments = expression ((',' expression)+ ','?)?
+    private ExpressionSyntax ParseCallExpression()
+    {
+        var expression = ParsePrimary();
+        if (_current.Kind != SyntaxKind.OpenParenthesisToken)
+        {
+            return expression;
+        }
+
+        var openParenthesis = Advance();
+        var arguments = ParseArguments();
+        var closeParenthesis = Match(SyntaxKind.CloseParenthesisToken);
+        return _syntaxFactory.CallExpression(
+            expression,
+            openParenthesis,
+            arguments,
+            closeParenthesis
+        );
+    }
+
+    private SyntaxList<ExpressionSyntax> ParseArguments()
+    {
+        SyntaxListBuilder<ExpressionSyntax> arguments = new();
+        while (
+            _current.Kind is not SyntaxKind.CloseParenthesisToken and not SyntaxKind.EndOfFileToken
+        )
+        {
+            var argument = ParseExpression();
+            arguments.Add(argument);
+
+            if (_current.Kind == SyntaxKind.CommaToken)
+            {
+                Advance();
+                continue;
+            }
+
+            break;
+        }
+
+        return arguments.ToSyntaxList();
+    }
+
+    // primary-expression = literal | identifier-expression
     // literal = INT | 'true' | 'false'
-    private ExpressionSyntax ParseLiteral()
+    // identifier-expression = ID
+    private ExpressionSyntax ParsePrimary()
     {
         switch (_current.Kind)
         {
@@ -637,6 +712,9 @@ internal sealed class Parser(SyntaxFactory syntaxFactory)
             case SyntaxKind.TrueKeyword:
             case SyntaxKind.FalseKeyword:
                 return _syntaxFactory.LiteralExpression(Advance());
+
+            case SyntaxKind.IdentifierToken:
+                return _syntaxFactory.IdentifierExpression(MatchIdentifier());
 
             default:
                 _diagnostics.AddError(_current, DiagnosticMessages.ExpressionExpected);
@@ -687,9 +765,14 @@ internal sealed class Parser(SyntaxFactory syntaxFactory)
 
     private Token MatchNewLine()
     {
-        if (_current.Kind is SyntaxKind.NewLineToken or SyntaxKind.EndOfFileToken)
+        if (_current.Kind == SyntaxKind.NewLineToken)
         {
             return Advance();
+        }
+
+        if (_current.Kind == SyntaxKind.EndOfFileToken)
+        {
+            return _current;
         }
 
         _diagnostics.AddError(

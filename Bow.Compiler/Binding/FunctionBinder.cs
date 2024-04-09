@@ -43,6 +43,8 @@ internal sealed class FunctionBinder(FunctionSymbol function) : Binder(GetParent
             SyntaxKind.ExpressionStatement
                 => BindExpressionStatement((ExpressionStatementSyntax)syntax, diagnostics),
 
+            SyntaxKind.IfKeyword => BindIfStatement((IfStatementSyntax)syntax, diagnostics),
+
             _ => throw new UnreachableException()
         };
     }
@@ -57,6 +59,12 @@ internal sealed class FunctionBinder(FunctionSymbol function) : Binder(GetParent
             SyntaxKind.LiteralExpression
                 => BindLiteralExpression((LiteralExpressionSyntax)syntax, diagnostics),
 
+            SyntaxKind.IdentifierExpression
+                => BindIdentifierExpression((IdentifierExpressionSyntax)syntax, diagnostics),
+
+            SyntaxKind.CallExpression
+                => BindCallExpression((CallExpressionSyntax)syntax, diagnostics),
+
             SyntaxKind.UnaryExpression
                 => BindUnaryExpression((UnaryExpressionSyntax)syntax, diagnostics),
 
@@ -65,6 +73,59 @@ internal sealed class FunctionBinder(FunctionSymbol function) : Binder(GetParent
 
             _ => throw new UnreachableException()
         };
+    }
+
+    private BoundCallExpression BindCallExpression(
+        CallExpressionSyntax syntax,
+        DiagnosticBag diagnostics
+    )
+    {
+        var expression = BindExpression(syntax.Expression, diagnostics);
+        if (expression.Type is not FunctionTypeSymbol { Function: var function })
+        {
+            diagnostics.AddError(
+                syntax.Expression,
+                DiagnosticMessages.ExpressionNotCallable,
+                expression.Type.Name
+            );
+
+            return new BoundCallExpression(syntax, MissingFunctionSymbol.Instance, []);
+        }
+
+        if (syntax.Arguments.Count != function.Parameters.Length)
+        {
+            diagnostics.AddError(
+                syntax,
+                DiagnosticMessages.ArgumentCountMismatch,
+                function.Parameters.Length.ToString(),
+                syntax.Arguments.Count.ToString()
+            );
+        }
+
+        var arguments = ImmutableArray.CreateBuilder<BoundExpression>(syntax.Arguments.Count);
+        foreach (var argumentSyntax in syntax.Arguments)
+        {
+            var argument = BindExpression(argumentSyntax, diagnostics);
+            arguments.Add(argument);
+        }
+
+        return new BoundCallExpression(syntax, function, arguments.MoveToImmutable());
+    }
+
+    private BoundIdentifierExpression BindIdentifierExpression(
+        IdentifierExpressionSyntax syntax,
+        DiagnosticBag diagnostics
+    )
+    {
+        var name = syntax.Identifier.IdentifierText;
+        Symbol? symbol = Lookup(name);
+        if (symbol == null)
+        {
+            diagnostics.AddError(syntax.Identifier, DiagnosticMessages.NameNotFound, name);
+            symbol = MissingSymbol.Instance;
+        }
+
+        return new BoundIdentifierExpression(syntax, symbol);
     }
 
     private static BoundExpression CreateImplicitCastExpression(
@@ -84,7 +145,7 @@ internal sealed class FunctionBinder(FunctionSymbol function) : Binder(GetParent
     {
         var operand = BindExpression(syntax.Operand, diagnostics);
         var @operator = BoundOperator.UnaryOperatorFor(syntax.Operator.Kind, operand.Type);
-        if (@operator.OperandType == MissingTypeSymbol.Instance)
+        if (@operator.OperandType == PlaceholderTypeSymbol.UnknownType)
         {
             diagnostics.AddError(
                 syntax.Operator,
@@ -187,6 +248,35 @@ internal sealed class FunctionBinder(FunctionSymbol function) : Binder(GetParent
     {
         var expression = BindExpression(syntax.Expression, diagnostics);
         return new BoundExpressionStatement(syntax, expression);
+    }
+
+    private BoundIfStatement BindIfStatement(IfStatementSyntax syntax, DiagnosticBag diagnostics)
+    {
+        var condition = BindExpression(syntax.Condition, diagnostics);
+        var then = BindBlockStatement(syntax.Then, diagnostics);
+        ImmutableArray<BoundIfElseClause> elseIfs;
+        if (syntax.ElseIfs.Count > 0)
+        {
+            var elseIfsBuilder = ImmutableArray.CreateBuilder<BoundIfElseClause>(
+                syntax.ElseIfs.Count
+            );
+
+            foreach (var elseIfSyntax in syntax.ElseIfs)
+            {
+                var elseIfCondition = BindExpression(elseIfSyntax.Condition, diagnostics);
+                var elseIfThen = BindBlockStatement(elseIfSyntax.Body, diagnostics);
+                elseIfsBuilder.Add(new BoundIfElseClause(elseIfCondition, elseIfThen));
+            }
+
+            elseIfs = elseIfsBuilder.MoveToImmutable();
+        }
+        else
+        {
+            elseIfs = [];
+        }
+
+        var @else = syntax.Else != null ? BindBlockStatement(syntax.Else.Body, diagnostics) : null;
+        return new BoundIfStatement(syntax, condition, then, elseIfs, @else);
     }
 
     private static BoundLiteralExpression BindLiteralExpression(

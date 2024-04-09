@@ -8,4 +8,7 @@ public abstract class FunctionSymbol : Symbol
     public abstract ImmutableArray<ParameterSymbol> Parameters { get; }
     public abstract TypeSymbol ReturnType { get; }
     public abstract FrozenDictionary<string, ParameterSymbol> ParameterMap { get; }
+
+    private TypeSymbol? _lazyType;
+    public TypeSymbol Type => _lazyType ??= new FunctionTypeSymbol(this);
 }

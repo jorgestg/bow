@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using Bow.Compiler.Syntax;
 
 namespace Bow.Compiler.Symbols;
@@ -38,5 +39,61 @@ internal sealed class PrimitiveTypeSymbol(string name, PrimitiveTypeKind primiti
             PrimitiveTypeKind.Signed64 or PrimitiveTypeKind.Unsigned64 => 8,
             _ => throw new UnreachableException()
         };
+    }
+
+    public override bool TryUnify(TypeSymbol other, [MaybeNullWhen(false)] out TypeSymbol result)
+    {
+        if (ReferenceEquals(this, other))
+        {
+            result = this;
+            return true;
+        }
+
+        // Non-numeric types must be equal
+        if (!other.IsNumericType())
+        {
+            result = null;
+            return false;
+        }
+
+        var otherAsPrimitive = (PrimitiveTypeSymbol)other;
+        var areCompatible =
+            this.IsFloat() && otherAsPrimitive.IsFloat()
+            || this.IsUnsigned() && otherAsPrimitive.IsUnsigned()
+            || !this.IsUnsigned() && !otherAsPrimitive.IsUnsigned();
+
+        if (areCompatible)
+        {
+            var thisTypeSize = this.GetSizeInBytes();
+            var otherTypeSize = otherAsPrimitive.GetSizeInBytes();
+            result = thisTypeSize > otherTypeSize ? this : other;
+            return true;
+        }
+
+        result = null;
+        return false;
+    }
+
+    public override bool IsAssignableTo(TypeSymbol other)
+    {
+        if (ReferenceEquals(this, other))
+        {
+            return true;
+        }
+
+        // Non-numeric types must be equal
+        if (!other.IsNumericType())
+        {
+            return false;
+        }
+
+        var otherAsPrimitive = (PrimitiveTypeSymbol)other;
+        var areCompatible =
+            this.IsFloat() && otherAsPrimitive.IsFloat()
+            || this.IsUnsigned() && otherAsPrimitive.IsUnsigned()
+            || !this.IsUnsigned() && !otherAsPrimitive.IsUnsigned();
+
+        return areCompatible
+            && otherAsPrimitive.GetSizeInBytes() >= otherAsPrimitive.GetSizeInBytes();
     }
 }

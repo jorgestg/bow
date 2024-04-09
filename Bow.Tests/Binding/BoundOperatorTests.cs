@@ -29,8 +29,8 @@ public class BoundOperatorTests
             SyntaxKind.MinusToken,
             BoundOperatorKind.Negation,
             BuiltInPackage.UnitType,
-            MissingTypeSymbol.Instance,
-            MissingTypeSymbol.Instance,
+            PlaceholderTypeSymbol.UnknownType,
+            PlaceholderTypeSymbol.UnknownType,
         ],
         [
             // not bool => bool
@@ -45,8 +45,8 @@ public class BoundOperatorTests
             SyntaxKind.NotKeyword,
             BoundOperatorKind.LogicalNegation,
             BuiltInPackage.Signed32Type,
-            MissingTypeSymbol.Instance,
-            MissingTypeSymbol.Instance,
+            PlaceholderTypeSymbol.UnknownType,
+            PlaceholderTypeSymbol.UnknownType,
         ],
     ];
 
@@ -93,8 +93,8 @@ public class BoundOperatorTests
             BoundOperatorKind.Equals,
             BuiltInPackage.UnitType,
             BuiltInPackage.NeverType,
-            MissingTypeSymbol.Instance,
-            MissingTypeSymbol.Instance
+            PlaceholderTypeSymbol.UnknownType,
+            PlaceholderTypeSymbol.UnknownType
         ],
         [
             // s32 & s16 => s32
@@ -111,8 +111,8 @@ public class BoundOperatorTests
             BoundOperatorKind.BitwiseAnd,
             BuiltInPackage.Unsigned32Type,
             BuiltInPackage.Signed32Type,
-            MissingTypeSymbol.Instance,
-            MissingTypeSymbol.Instance
+            PlaceholderTypeSymbol.UnknownType,
+            PlaceholderTypeSymbol.UnknownType
         ],
         [
             // bool and bool => bool
@@ -129,8 +129,8 @@ public class BoundOperatorTests
             BoundOperatorKind.LogicalAnd,
             BuiltInPackage.BoolType,
             BuiltInPackage.UnitType,
-            MissingTypeSymbol.Instance,
-            MissingTypeSymbol.Instance
+            PlaceholderTypeSymbol.UnknownType,
+            PlaceholderTypeSymbol.UnknownType
         ],
     ];
 
