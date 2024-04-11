@@ -95,9 +95,11 @@ public enum SyntaxKind
     SimpleParameterDeclaration,
     SelfParameterDeclaration,
 
+    // Other nodes
+    Initializer,
+
     // Statement nodes
     LocalDeclaration,
-    LocalDeclarationInitializer,
     BlockStatement,
     ExpressionStatement,
     ReturnStatement,
@@ -115,4 +117,6 @@ public enum SyntaxKind
     CallExpression,
     UnaryExpression,
     BinaryExpression,
+    StructCreationExpression,
+    StructCreationFieldInitializer,
 }

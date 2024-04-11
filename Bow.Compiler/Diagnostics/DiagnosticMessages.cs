@@ -30,4 +30,6 @@ internal static class DiagnosticMessages
     public const string ExpressionIsNotAssignable = "Expression is not assignable.";
     public const string LocalVariableIsNotInitialized = "Local variable '{0}' is not initialized.";
     public const string VariableIsImmutable = "'{0}' is immutable.";
+    public const string StructNameExpected = "Struct name expected.";
+    public const string NameIsNotAMemberOfType = "'{0}' is not a member of '{1}'.";
 }

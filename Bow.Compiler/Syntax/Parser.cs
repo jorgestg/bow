@@ -513,12 +513,12 @@ internal sealed class Parser(SyntaxFactory syntaxFactory)
         var mutableKeyword = _current.Kind == SyntaxKind.MutKeyword ? Advance() : null;
         var identifier = MatchIdentifier();
         var type = IsTypeReferenceStart() ? ParseTypeReference() : null;
-        LocalDeclarationInitializerSyntax? initializer = null;
+        InitializerSyntax? initializer = null;
         if (_current.Kind == SyntaxKind.EqualsToken)
         {
             var operatorToken = Advance();
             var initializerExpression = ParseExpression();
-            initializer = _syntaxFactory.LocalDeclarationInitializer(operatorToken, initializerExpression);
+            initializer = _syntaxFactory.Initializer(operatorToken, initializerExpression);
         }
 
         return _syntaxFactory.LocalDeclaration(letKeyword, mutableKeyword, identifier, type, initializer);

@@ -26,7 +26,7 @@ public partial class SyntaxFactory
 
 const { definitions } = JSON.parse(jsonFile);
 
-const keywords = ["operator", "else", "if"];
+const keywords = ["operator", "else", "if", "struct"];
 function toCamelCase(name) {
   const camelCaseName = name[0].toLowerCase() + name.substring(1);
   return keywords.includes(camelCaseName) ? `@${camelCaseName}` : camelCaseName;

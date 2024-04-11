@@ -280,6 +280,10 @@ internal sealed class BlockBinder(Binder parent, FunctionSymbol function) : Bind
             SyntaxKind.CallExpression => BindCallExpression((CallExpressionSyntax)syntax, diagnostics),
             SyntaxKind.UnaryExpression => BindUnaryExpression((UnaryExpressionSyntax)syntax, diagnostics),
             SyntaxKind.BinaryExpression => BindBinaryExpression((BinaryExpressionSyntax)syntax, diagnostics),
+
+            SyntaxKind.StructCreationExpression
+                => BindStructCreationExpression((StructCreationExpressionSyntax)syntax, diagnostics),
+
             _ => throw new UnreachableException()
         };
     }
@@ -552,5 +556,72 @@ internal sealed class BlockBinder(Binder parent, FunctionSymbol function) : Bind
         }
 
         return new BoundBinaryExpression(syntax, left, @operator, right);
+    }
+
+    private BoundStructCreationExpression BindStructCreationExpression(
+        StructCreationExpressionSyntax syntax,
+        DiagnosticBag diagnostics
+    )
+    {
+        var referencedType = BindType(syntax.Struct, diagnostics);
+        StructSymbol? @struct = referencedType as StructSymbol;
+        if (@struct == null)
+        {
+            diagnostics.AddError(syntax.Struct, DiagnosticMessages.StructNameExpected, referencedType.Name);
+        }
+
+        var fieldInitializers = ImmutableArray.CreateBuilder<BoundFieldInitializer>(syntax.FieldInitializers.Count);
+        foreach (var fieldInitializerSyntax in syntax.FieldInitializers)
+        {
+            var name = fieldInitializerSyntax.Identifier.IdentifierText;
+            FieldSymbol? field = @struct?.Fields.FindByName(name);
+            if (@struct != null && field == null)
+            {
+                diagnostics.AddError(
+                    fieldInitializerSyntax.Identifier,
+                    DiagnosticMessages.NameIsNotAMemberOfType,
+                    name,
+                    @struct.Name
+                );
+            }
+
+            BoundExpression initializer;
+            if (fieldInitializerSyntax.Initializer == null)
+            {
+                IdentifierExpressionSyntax identifierSyntax =
+                    new(fieldInitializerSyntax.SyntaxTree, fieldInitializerSyntax.Identifier);
+
+                initializer = BindIdentifierExpression(identifierSyntax, diagnostics);
+            }
+            else
+            {
+                initializer = BindExpression(fieldInitializerSyntax.Initializer.Expression, diagnostics);
+            }
+
+            if (field == null)
+            {
+                continue;
+            }
+
+            if (!initializer.Type.IsAssignableTo(field.Type))
+            {
+                diagnostics.AddError(
+                    (SyntaxNode?)fieldInitializerSyntax.Initializer?.Expression ?? fieldInitializerSyntax.Identifier,
+                    DiagnosticMessages.TypeMismatch,
+                    field.Type.Name,
+                    initializer.Type.Name
+                );
+            }
+            else
+            {
+                initializer = CreateImplicitCastExpression(initializer, field.Type);
+            }
+
+            var fieldInitializer = new BoundFieldInitializer(field, initializer);
+            fieldInitializers.Add(fieldInitializer);
+        }
+
+        var type = (TypeSymbol?)@struct ?? PlaceholderTypeSymbol.UnknownType;
+        return new BoundStructCreationExpression(syntax, type, fieldInitializers.MoveToImmutable());
     }
 }

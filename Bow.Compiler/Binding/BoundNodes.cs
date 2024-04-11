@@ -22,6 +22,7 @@ internal enum BoundNodeKind
     CastExpression,
     UnaryExpression,
     BinaryExpression,
+    StructCreationExpression
 }
 
 internal abstract class BoundNode
@@ -219,3 +220,21 @@ internal sealed class BoundBinaryExpression(
     public BoundExpression Right { get; } = right;
 }
 
+internal sealed class BoundStructCreationExpression(
+    StructCreationExpressionSyntax syntax,
+    TypeSymbol type,
+    ImmutableArray<BoundFieldInitializer> fieldInitializers
+) : BoundExpression
+{
+    public override BoundNodeKind Kind => BoundNodeKind.StructCreationExpression;
+    public override StructCreationExpressionSyntax Syntax { get; } = syntax;
+    public override TypeSymbol Type { get; } = type;
+
+    public ImmutableArray<BoundFieldInitializer> FieldInitializers { get; } = fieldInitializers;
+}
+
+internal readonly struct BoundFieldInitializer(FieldSymbol field, BoundExpression expression)
+{
+    public FieldSymbol Field { get; } = field;
+    public BoundExpression Expression { get; } = expression;
+}

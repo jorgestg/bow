@@ -162,6 +162,12 @@
         "Type": { "type": "TypeReference", "optional": true }
       }
     },
+    "Initializer": {
+      "children": {
+        "Operator": "Token",
+        "Expression": "Expression"
+      }
+    },
     "Statement": {
       "abstract": true
     },
@@ -172,16 +178,7 @@
         "MutKeyword": { "type": "Token", "optional": true },
         "Identifier": "IdentifierToken",
         "Type": { "type": "TypeReference", "optional": true },
-        "Initializer": {
-          "type": "LocalDeclarationInitializer",
-          "optional": true
-        }
-      }
-    },
-    "LocalDeclarationInitializer": {
-      "children": {
-        "Operator": "Token",
-        "Expression": "Expression"
+        "Initializer": { "type": "Initializer", "optional": true }
       }
     },
     "BlockStatement": {
@@ -290,6 +287,24 @@
         "Left": "Expression",
         "Operator": "Token",
         "Right": "Expression"
+      }
+    },
+    "StructCreationExpression": {
+      "extends": "Expression",
+      "children": {
+        "Struct": "TypeReference",
+        "OpenBrace": "Token",
+        "FieldInitializers": {
+          "type": "StructCreationFieldInitializer",
+          "array": true
+        },
+        "CloseBrace": "Token"
+      }
+    },
+    "StructCreationFieldInitializer": {
+      "children": {
+        "Identifier": "IdentifierToken",
+        "Initializer": { "type": "Initializer", "optional": true }
       }
     }
   }
