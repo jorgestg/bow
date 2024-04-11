@@ -37,7 +37,7 @@ internal sealed class BlockBinder(Binder parent, FunctionSymbol function) : Bind
     private AmbientTypeStack _ambientTypeStack = new(function.ReturnType);
 
     // If we're binding an expression on the RHS we need to make sure locals are initialized
-    private bool _bindingRightHandSide = true;
+    private bool _bindingLeftHandSide = false;
 
     private Dictionary<string, LocalSymbol>? _lazyLocals;
     private Dictionary<string, LocalSymbol> Locals => _lazyLocals ??= [];
@@ -85,15 +85,9 @@ internal sealed class BlockBinder(Binder parent, FunctionSymbol function) : Bind
             return new BoundLocalDeclaration(syntax, local, null);
         }
 
-        var previousBindingRightHandSide = _bindingRightHandSide;
-        _bindingRightHandSide = true;
         _ambientTypeStack.Push(type);
-
         var initializer = BindExpression(syntax.Initializer.Expression, diagnostics);
-
-        _bindingRightHandSide = previousBindingRightHandSide;
         _ambientTypeStack.Pop();
-
         if (type == PlaceholderTypeSymbol.ToBeInferred)
         {
             type = initializer.Type;
@@ -201,18 +195,16 @@ internal sealed class BlockBinder(Binder parent, FunctionSymbol function) : Bind
         DiagnosticBag diagnostics
     )
     {
+        var previousBindingLeftHandSide = _bindingLeftHandSide;
+        _bindingLeftHandSide = true;
         var assignee = BindExpression(syntax.Assignee, diagnostics);
-        var isAssignable = TryGetReferencedSymbol(assignee, out var referencedSymbol);
+        _bindingLeftHandSide = previousBindingLeftHandSide;
 
-        var previousBindingRightHandSide = _bindingRightHandSide;
-        _bindingRightHandSide = true;
+        var isAssignable = TryGetReferencedSymbol(assignee, out var referencedSymbol);
         _ambientTypeStack.Push(isAssignable ? assignee.Type : PlaceholderTypeSymbol.UnknownType);
 
-        // Even though the assignee expression may not be assignable,
-        // we still need to bind the RHS expression to check for errors in it
         var expression = BindExpression(syntax.Expression, diagnostics);
 
-        _bindingRightHandSide = previousBindingRightHandSide;
         _ambientTypeStack.Pop();
 
         if (!isAssignable)
@@ -227,7 +219,8 @@ internal sealed class BlockBinder(Binder parent, FunctionSymbol function) : Bind
             local.Builder.IsInitialized = true;
             return new BoundAssignmentStatement(syntax, referencedSymbol, expression);
         }
-        else if (!referencedSymbol.IsMutable)
+
+        if (!referencedSymbol.IsMutable)
         {
             diagnostics.AddError(syntax.Assignee, DiagnosticMessages.VariableIsImmutable, referencedSymbol.Name);
         }
@@ -465,7 +458,7 @@ internal sealed class BlockBinder(Binder parent, FunctionSymbol function) : Bind
             diagnostics.AddError(syntax.Identifier, DiagnosticMessages.NameNotFound, name);
             symbol = MissingSymbol.Instance;
         }
-        else if (_bindingRightHandSide && symbol is LocalSymbol { IsInitialized: false })
+        else if (!_bindingLeftHandSide && symbol is LocalSymbol { IsInitialized: false })
         {
             diagnostics.AddError(syntax.Identifier, DiagnosticMessages.LocalVariableIsNotInitialized, name);
         }
