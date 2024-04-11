@@ -28,4 +28,6 @@ internal static class DiagnosticMessages
     public const string ExpressionNotCallable = "Expression is not callable.";
     public const string ArgumentCountMismatch = "Expected {0} arguments, but got {1}.";
     public const string ExpressionIsNotAssignable = "Expression is not assignable.";
+    public const string LocalVariableIsNotInitialized = "Local variable '{0}' is not initialized.";
+    public const string VariableIsImmutable = "'{0}' is immutable.";
 }

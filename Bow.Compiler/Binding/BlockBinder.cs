@@ -75,27 +75,15 @@ internal sealed class BlockBinder(Binder parent, FunctionSymbol function) : Bind
     private BoundLocalDeclaration BindLocalDeclaration(LocalDeclarationSyntax syntax, DiagnosticBag diagnostics)
     {
         var name = syntax.Identifier.IdentifierText;
+        var type = syntax.Type == null ? PlaceholderTypeSymbol.ToBeInferred : BindType(syntax.Type, diagnostics);
         LocalSymbol local;
-        TypeSymbol type;
-        if (syntax.Type != null && syntax.Initializer == null)
+        if (syntax.Initializer == null)
         {
-            type = BindType(syntax.Type, diagnostics);
-            local = new SimpleLocalSymbol(_function, syntax, type);
+            LocalSymbolBuilder localBuilder = new(_function, syntax, type);
+            local = new LateInitLocalSymbol(localBuilder);
             Locals.Add(name, local);
             return new BoundLocalDeclaration(syntax, local, null);
         }
-
-        if (syntax.Type == null && syntax.Initializer == null)
-        {
-            LocalSymbolBuilder localBuilder = new(_function, syntax);
-            local = new LateBoundLocalSymbol(localBuilder);
-            Locals.Add(name, local);
-            return new BoundLocalDeclaration(syntax, local, null);
-        }
-
-        type = syntax.Type == null ? PlaceholderTypeSymbol.ToBeInferred : BindType(syntax.Type, diagnostics);
-
-        Debug.Assert(syntax.Initializer != null);
 
         var previousBindingRightHandSide = _bindingRightHandSide;
         _bindingRightHandSide = true;
@@ -124,9 +112,8 @@ internal sealed class BlockBinder(Binder parent, FunctionSymbol function) : Bind
             );
         }
 
-        local = new SimpleLocalSymbol(_function, syntax, type);
+        local = new InitializedLocalSymbol(_function, syntax, type);
         Locals.Add(name, local);
-
         return new BoundLocalDeclaration(syntax, local, initializer);
     }
 
@@ -234,11 +221,15 @@ internal sealed class BlockBinder(Binder parent, FunctionSymbol function) : Bind
             return new BoundAssignmentStatement(syntax, referencedSymbol, expression);
         }
 
-        if (referencedSymbol is LateBoundLocalSymbol local && !local.Builder.IsResolved)
+        if (referencedSymbol is LateInitLocalSymbol { HasResolvedType: false } local)
         {
-            Debug.Assert(assignee.Type == PlaceholderTypeSymbol.ToBeInferred);
             local.Builder.Type = expression.Type;
+            local.Builder.IsInitialized = true;
             return new BoundAssignmentStatement(syntax, referencedSymbol, expression);
+        }
+        else if (!referencedSymbol.IsMutable)
+        {
+            diagnostics.AddError(syntax.Assignee, DiagnosticMessages.VariableIsImmutable, referencedSymbol.Name);
         }
 
         if (!expression.Type.IsAssignableTo(assignee.Type))
@@ -473,6 +464,10 @@ internal sealed class BlockBinder(Binder parent, FunctionSymbol function) : Bind
         {
             diagnostics.AddError(syntax.Identifier, DiagnosticMessages.NameNotFound, name);
             symbol = MissingSymbol.Instance;
+        }
+        else if (_bindingRightHandSide && symbol is LocalSymbol { IsInitialized: false })
+        {
+            diagnostics.AddError(syntax.Identifier, DiagnosticMessages.LocalVariableIsNotInitialized, name);
         }
 
         return new BoundIdentifierExpression(syntax, symbol);

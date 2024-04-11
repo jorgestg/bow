@@ -2,11 +2,7 @@ using Bow.Compiler.Syntax;
 
 namespace Bow.Compiler.Symbols;
 
-public sealed class FieldSymbol(
-    StructSymbol @struct,
-    FieldDeclarationSyntax syntax,
-    TypeSymbol type
-) : Symbol
+public sealed class FieldSymbol(StructSymbol @struct, FieldDeclarationSyntax syntax, TypeSymbol type) : Symbol
 {
     public override string Name => Syntax.Identifier.IdentifierText;
 
@@ -14,9 +10,7 @@ public sealed class FieldSymbol(
     {
         get
         {
-            var defaultVisibility = Struct.IsData
-                ? SymbolAccessibility.Public
-                : SymbolAccessibility.Private;
+            var defaultVisibility = Struct.IsData ? SymbolAccessibility.Public : SymbolAccessibility.Private;
 
             return SymbolFacts.GetAccessibilityFromToken(Syntax.AccessModifier, defaultVisibility);
         }
@@ -24,8 +18,8 @@ public sealed class FieldSymbol(
 
     public override FieldDeclarationSyntax Syntax { get; } = syntax;
     public override ModuleSymbol Module => Struct.Module;
+    public override bool IsMutable => Syntax.MutKeyword != null;
 
     public StructSymbol Struct { get; } = @struct;
-    public bool IsMutable => Syntax.MutKeyword != null;
     public TypeSymbol Type { get; } = type;
 }
