@@ -34,9 +34,12 @@ parameter-declaration = 'mut'? (ID type-reference | '*'? 'self')
 block = '{' (statements NL)? '}'
 
 statements = statement (NL statement)*
-statement = return-statement | if-statement | expression
+statement = local-declaration | return-statement | if-statement | assignment-statement | expression
+local-declaration = 'let' 'mut'? ID type-reference? '=' expression | 'let' 'mut'? ID type-reference
 return-statement = 'return' expression
 if-statement = 'if' expression block ('else' 'if' expression block)* ('else' block)?
+while-statement = 'while' expression block
+assignment-statement = expression '=' expression
 
 expression = primary-expression | call-expression | unary-expression | binary-expression
 primary-expression = literal | identifier-expression

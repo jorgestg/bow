@@ -13,6 +13,11 @@ public sealed class PlaceholderTypeSymbol : TypeSymbol
     public static readonly PlaceholderTypeSymbol UnknownType = new("???", true);
 
     /// <summary>
+    /// Placeholder for a type that is currently being inferred.
+    /// </summary>
+    public static readonly PlaceholderTypeSymbol ToBeInferred = new("???", true);
+
+    /// <summary>
     /// Placeholder type for types.
     /// </summary>
     public static readonly PlaceholderTypeSymbol MetaType = new("type", false);

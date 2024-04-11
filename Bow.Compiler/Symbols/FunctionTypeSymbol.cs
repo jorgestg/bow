@@ -5,6 +5,8 @@ namespace Bow.Compiler.Symbols;
 
 public sealed class FunctionTypeSymbol(FunctionSymbol function) : TypeSymbol
 {
+    public static readonly FunctionTypeSymbol Missing = new(MissingFunctionSymbol.Instance);
+
     private string? _lazyName;
     public override string Name
     {

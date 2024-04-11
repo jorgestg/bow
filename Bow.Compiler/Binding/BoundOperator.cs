@@ -40,10 +40,7 @@ internal readonly struct BoundOperator
     public TypeSymbol OperandType { get; }
     public TypeSymbol ResultType { get; }
 
-    public static BoundOperator UnaryOperatorFor(
-        SyntaxKind operatorSyntaxKind,
-        TypeSymbol operandType
-    )
+    public static BoundOperator UnaryOperatorFor(SyntaxKind operatorSyntaxKind, TypeSymbol operandType)
     {
         BoundOperatorKind kind;
         TypeSymbol resultType;
@@ -51,9 +48,7 @@ internal readonly struct BoundOperator
         {
             kind = BoundOperatorKind.LogicalNegation;
             resultType =
-                operandType == BuiltInPackage.BoolType
-                    ? BuiltInPackage.BoolType
-                    : PlaceholderTypeSymbol.UnknownType;
+                operandType == BuiltInPackage.BoolType ? BuiltInPackage.BoolType : PlaceholderTypeSymbol.UnknownType;
         }
         else
         {
@@ -105,9 +100,7 @@ internal readonly struct BoundOperator
             case BoundOperatorKind.Addition:
             case BoundOperatorKind.Subtraction:
             {
-                if (
-                    leftType.TryUnify(rightType, out var unifiedType) && unifiedType.IsNumericType()
-                )
+                if (leftType.TryUnify(rightType, out var unifiedType) && unifiedType.IsNumericType())
                 {
                     operandType = unifiedType;
                     resultType = unifiedType;
@@ -121,9 +114,7 @@ internal readonly struct BoundOperator
             case BoundOperatorKind.Less:
             case BoundOperatorKind.LessOrEqual:
             {
-                if (
-                    leftType.TryUnify(rightType, out var unifiedType) && unifiedType.IsNumericType()
-                )
+                if (leftType.TryUnify(rightType, out var unifiedType) && unifiedType.IsNumericType())
                 {
                     operandType = unifiedType;
                     resultType = BuiltInPackage.BoolType;
@@ -163,14 +154,8 @@ internal readonly struct BoundOperator
                     or PrimitiveTypeKind.Unsigned64
                         => unifiedType,
 
-                    PrimitiveTypeKind.Signed8
-                    or PrimitiveTypeKind.Signed16
-                        => BuiltInPackage.Signed32Type,
-
-                    PrimitiveTypeKind.Unsigned8
-                    or PrimitiveTypeKind.Unsigned16
-                        => BuiltInPackage.Unsigned32Type,
-
+                    PrimitiveTypeKind.Signed8 or PrimitiveTypeKind.Signed16 => BuiltInPackage.Signed32Type,
+                    PrimitiveTypeKind.Unsigned8 or PrimitiveTypeKind.Unsigned16 => BuiltInPackage.Unsigned32Type,
                     _ => PlaceholderTypeSymbol.UnknownType
                 };
 

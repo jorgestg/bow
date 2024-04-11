@@ -9,8 +9,7 @@ internal sealed class Scanner(SyntaxFactory syntaxFactory)
     private int _currentIndex;
 
     private char CurrentChar => _source.Length > _currentIndex ? _source[_currentIndex] : '\0';
-    private char LookAheadChar =>
-        _source.Length > _currentIndex + 1 ? _source[_currentIndex + 1] : '\0';
+    private char LookAheadChar => _source.Length > _currentIndex + 1 ? _source[_currentIndex + 1] : '\0';
 
     public Token NextToken()
     {
@@ -42,24 +41,15 @@ internal sealed class Scanner(SyntaxFactory syntaxFactory)
             '*' => CreateToken(SyntaxKind.StarToken),
             '/' => CreateToken(SyntaxKind.SlashToken),
             '+' => CreateToken(SyntaxKind.PlusToken),
-            '-' => CreateToken(SyntaxKind.MinusToken),
+            '-' => char.IsAsciiDigit(CurrentChar) ? CreateNumberToken() : CreateToken(SyntaxKind.MinusToken),
             '%' => CreateToken(SyntaxKind.PercentToken),
             '=' => CreateCompoundToken('=', SyntaxKind.EqualEqualToken, SyntaxKind.EqualsToken),
-            '>'
-                => CreateCompoundToken(
-                    '=',
-                    SyntaxKind.GreaterThanEqualToken,
-                    SyntaxKind.GreaterThanToken
-                ),
+            '>' => CreateCompoundToken('=', SyntaxKind.GreaterThanEqualToken, SyntaxKind.GreaterThanToken),
 
             '<'
                 => CurrentChar == '>'
                     ? CreateToken(SyntaxKind.DiamondToken)
-                    : CreateCompoundToken(
-                        '=',
-                        SyntaxKind.LessThanEqualToken,
-                        SyntaxKind.LessThanToken
-                    ),
+                    : CreateCompoundToken('=', SyntaxKind.LessThanEqualToken, SyntaxKind.LessThanToken),
 
             '&' => CreateToken(SyntaxKind.AmpersandToken),
             '|' => CreateToken(SyntaxKind.PipeToken),
@@ -102,9 +92,7 @@ internal sealed class Scanner(SyntaxFactory syntaxFactory)
                     break;
 
                 default:
-                    return newLineIndex == -1
-                        ? null
-                        : _syntaxFactory.Token(SyntaxKind.NewLineToken, newLineIndex, 1);
+                    return newLineIndex == -1 ? null : _syntaxFactory.Token(SyntaxKind.NewLineToken, newLineIndex, 1);
             }
         }
     }
@@ -164,6 +152,7 @@ internal sealed class Scanner(SyntaxFactory syntaxFactory)
             "mod" => CreateToken(SyntaxKind.ModKeyword),
             "mut" => CreateToken(SyntaxKind.MutKeyword),
             "if" => CreateToken(SyntaxKind.IfKeyword),
+            "let" => CreateToken(SyntaxKind.LetKeyword),
             "never" => CreateToken(SyntaxKind.NeverKeyword),
             "not" => CreateToken(SyntaxKind.NotKeyword),
             "or" => CreateToken(SyntaxKind.OrKeyword),
@@ -183,11 +172,12 @@ internal sealed class Scanner(SyntaxFactory syntaxFactory)
             "u64" => CreateToken(SyntaxKind.U64Keyword),
             "unit" => CreateToken(SyntaxKind.UnitKeyword),
             "use" => CreateToken(SyntaxKind.UseKeyword),
+            "while" => CreateToken(SyntaxKind.WhileKeyword),
             _ => _syntaxFactory.Identifier(_startIndex, _currentIndex - _startIndex)
         };
     }
 
-    // number: [0-9]+ ('_' [0-9]+)*
+    // number: '-'? [0-9]+ ('_' [0-9]+)*
     private Token CreateNumberToken()
     {
         while (true)

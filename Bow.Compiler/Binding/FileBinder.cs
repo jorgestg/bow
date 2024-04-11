@@ -10,11 +10,7 @@ internal sealed class FileBinder : Binder
     private readonly ModuleSymbol _module;
     private readonly FrozenDictionary<string, Symbol> _symbols;
 
-    private FileBinder(
-        ModuleSymbol module,
-        SyntaxTree syntaxTree,
-        FrozenDictionary<string, Symbol> symbols
-    )
+    private FileBinder(ModuleSymbol module, SyntaxTree syntaxTree, FrozenDictionary<string, Symbol> symbols)
         : base(module.Binder)
     {
         _module = module;
@@ -25,11 +21,7 @@ internal sealed class FileBinder : Binder
 
     public SyntaxTree SyntaxTree { get; }
 
-    public static FileBinder CreateAndBindImports(
-        ModuleSymbol module,
-        SyntaxTree syntaxTree,
-        DiagnosticBag diagnostics
-    )
+    public static FileBinder CreateAndBindImports(ModuleSymbol module, SyntaxTree syntaxTree, DiagnosticBag diagnostics)
     {
         Dictionary<string, Symbol> symbols = [];
         foreach (var useClause in syntaxTree.Root.UseClauses)
@@ -91,11 +83,7 @@ internal sealed class FileBinder : Binder
                     return typeSymbol;
                 }
 
-                diagnostics.AddError(
-                    namedType.Name,
-                    DiagnosticMessages.NameIsNotAType,
-                    namedType.Name.ToString()
-                );
+                diagnostics.AddError(namedType.Name, DiagnosticMessages.NameIsNotAType, namedType.Name.ToString());
 
                 return PlaceholderTypeSymbol.UnknownType;
             }

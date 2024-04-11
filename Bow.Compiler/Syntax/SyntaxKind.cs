@@ -16,6 +16,7 @@ public enum SyntaxKind
     F64Keyword,
     FunKeyword,
     IfKeyword,
+    LetKeyword,
     ModKeyword,
     MutKeyword,
     NeverKeyword,
@@ -37,6 +38,7 @@ public enum SyntaxKind
     U64Keyword,
     UnitKeyword,
     UseKeyword,
+    WhileKeyword,
 
     // Literal tokens
     IdentifierToken,
@@ -94,16 +96,21 @@ public enum SyntaxKind
     SelfParameterDeclaration,
 
     // Statement nodes
+    LocalDeclaration,
+    LocalDeclarationInitializer,
     BlockStatement,
     ExpressionStatement,
     ReturnStatement,
     IfStatement,
     ElseIfClause,
     ElseClause,
+    WhileStatement,
+    AssignmentStatement,
 
     // Expression nodes
     MissingExpression,
     LiteralExpression,
+    ParenthesizedExpression,
     IdentifierExpression,
     CallExpression,
     UnaryExpression,

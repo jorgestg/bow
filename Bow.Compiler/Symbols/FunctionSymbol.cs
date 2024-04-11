@@ -10,5 +10,19 @@ public abstract class FunctionSymbol : Symbol
     public abstract FrozenDictionary<string, ParameterSymbol> ParameterMap { get; }
 
     private TypeSymbol? _lazyType;
-    public TypeSymbol Type => _lazyType ??= new FunctionTypeSymbol(this);
+    public TypeSymbol Type
+    {
+        get
+        {
+            if (_lazyType == null)
+            {
+                _lazyType =
+                    this == MissingFunctionSymbol.Instance
+                        ? FunctionTypeSymbol.Missing
+                        : new FunctionTypeSymbol(this);
+            }
+
+            return _lazyType;
+        }
+    }
 }
