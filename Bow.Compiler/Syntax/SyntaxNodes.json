@@ -268,7 +268,7 @@
     "CallExpression": {
       "extends": "Expression",
       "children": {
-        "Expression": "Expression",
+        "Callee": "Expression",
         "OpenParenthesis": "Token",
         "Arguments": { "type": "Expression", "array": true },
         "CloseParenthesis": "Token"
@@ -292,7 +292,7 @@
     "StructCreationExpression": {
       "extends": "Expression",
       "children": {
-        "Struct": "TypeReference",
+        "Dot": "Token",
         "OpenBrace": "Token",
         "FieldInitializers": {
           "type": "StructCreationFieldInitializer",

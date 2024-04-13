@@ -41,7 +41,7 @@ if-statement = 'if' expression block ('else' 'if' expression block)* ('else' blo
 while-statement = 'while' expression block
 assignment-statement = expression '=' expression
 
-expression = primary-expression | call-expression | unary-expression | binary-expression
+expression = primary-expression | call-expression | unary-expression | binary-expression | struct-creation-expression
 primary-expression = literal | identifier-expression
 literal = INT | 'true' | 'false'
 identifier-expression = ID
@@ -59,6 +59,9 @@ binary-expression = expression (
     | '&' | '|'
     | 'and' | 'or'
 ) expression
+
+struct-creation-expression = '.' '{' (field-initialization (NL field-initialization)*)? '}'
+field-initialization = ID ('=' expression)?
 
 INT = [0-9]+ ('_' [0-9]+)*
 NL = '\n'

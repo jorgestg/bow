@@ -472,18 +472,22 @@ internal sealed class BlockBinder(Binder parent, FunctionSymbol function) : Bind
 
     private BoundCallExpression BindCallExpression(CallExpressionSyntax syntax, DiagnosticBag diagnostics)
     {
-        var expression = BindExpression(syntax.Expression, diagnostics);
-        if (expression.Type is not FunctionTypeSymbol { Function: var function })
+        var expression = BindExpression(syntax.Callee, diagnostics);
+        FunctionSymbol function;
+        if (expression.Type is FunctionTypeSymbol functionType)
         {
+            function = functionType.Function;
+        }
+        else
+        {
+            function = MissingFunctionSymbol.Instance;
             if (expression.Type != PlaceholderTypeSymbol.UnknownType)
             {
-                diagnostics.AddError(syntax.Expression, DiagnosticMessages.ExpressionNotCallable, expression.Type.Name);
+                diagnostics.AddError(syntax.Callee, DiagnosticMessages.ExpressionNotCallable, expression.Type.Name);
             }
-
-            return new BoundCallExpression(syntax, MissingFunctionSymbol.Instance, []);
         }
 
-        if (syntax.Arguments.Count != function.Parameters.Length)
+        if (syntax.Arguments.Count != function.Parameters.Length && function != MissingFunctionSymbol.Instance)
         {
             diagnostics.AddError(
                 syntax,
@@ -494,10 +498,22 @@ internal sealed class BlockBinder(Binder parent, FunctionSymbol function) : Bind
         }
 
         var arguments = ImmutableArray.CreateBuilder<BoundExpression>(syntax.Arguments.Count);
-        foreach (var argumentSyntax in syntax.Arguments)
+        for (var i = 0; i < syntax.Arguments.Count; i++)
         {
+            var parameter = function.Parameters.ElementAtOrDefault(i);
+            if (parameter != null)
+            {
+                _ambientTypeStack.Push(parameter.Type);
+            }
+
+            var argumentSyntax = syntax.Arguments[i];
             var argument = BindExpression(argumentSyntax, diagnostics);
             arguments.Add(argument);
+
+            if (parameter != null)
+            {
+                _ambientTypeStack.Pop();
+            }
         }
 
         return new BoundCallExpression(syntax, function, arguments.MoveToImmutable());
@@ -563,11 +579,11 @@ internal sealed class BlockBinder(Binder parent, FunctionSymbol function) : Bind
         DiagnosticBag diagnostics
     )
     {
-        var referencedType = BindType(syntax.Struct, diagnostics);
-        StructSymbol? @struct = referencedType as StructSymbol;
+        var expectedType = _ambientTypeStack.Peek();
+        StructSymbol? @struct = expectedType as StructSymbol;
         if (@struct == null)
         {
-            diagnostics.AddError(syntax.Struct, DiagnosticMessages.StructNameExpected, referencedType.Name);
+            diagnostics.AddError(syntax, DiagnosticMessages.CouldNotInferStructType);
         }
 
         var fieldInitializers = ImmutableArray.CreateBuilder<BoundFieldInitializer>(syntax.FieldInitializers.Count);

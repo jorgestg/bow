@@ -4,3 +4,5 @@
 - Rename: Else [if] clause -> else [if] block
 
 - Struct creation expression on the parser and grammar
+
+- Remove isLHS from block

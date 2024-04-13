@@ -16,7 +16,7 @@ internal static class DiagnosticMessages
     public const string MemberExpected = "Field or method expected.";
     public const string SelfParameterCannotHaveAType = "'self' parameters on methods cannot be type-annotated.";
     public const string ExpressionExpected = "Expression expected.";
-    public const string BraceShouldGoOnTheSameLine = "'{' should go on the same line as the declaration.";
+    public const string BraceShouldGoOnTheSameLine = "'{' should go on the same line as the declaration or statement.";
     public const string IntegerIsTooLargeForSize = "Integer is too large for '{0}'.";
     public const string ReturnExpressionExpected = "Return expression of type '{0}' expected.";
     public const string TypeMismatch = "Type mismatch: '{0}' expected, but got '{1}'.";
@@ -30,6 +30,6 @@ internal static class DiagnosticMessages
     public const string ExpressionIsNotAssignable = "Expression is not assignable.";
     public const string LocalVariableIsNotInitialized = "Local variable '{0}' is not initialized.";
     public const string VariableIsImmutable = "'{0}' is immutable.";
-    public const string StructNameExpected = "Struct name expected.";
+    public const string CouldNotInferStructType = "Could not infer struct type.";
     public const string NameIsNotAMemberOfType = "'{0}' is not a member of '{1}'.";
 }

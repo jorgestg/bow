@@ -26,7 +26,7 @@ internal sealed class Parser(SyntaxFactory syntaxFactory)
         if (_current.Kind == SyntaxKind.ModKeyword)
         {
             var modKeyword = Advance();
-            if (IsItemDeclarationStart())
+            if (CurrentIsItemDeclarationStart())
             {
                 return _syntaxFactory.CompilationUnit(
                     null,
@@ -44,7 +44,7 @@ internal sealed class Parser(SyntaxFactory syntaxFactory)
         return _syntaxFactory.CompilationUnit(modClause, useClauses, items);
     }
 
-    private bool IsItemDeclarationStart()
+    private bool CurrentIsItemDeclarationStart()
     {
         return _current.Kind switch
         {
@@ -142,7 +142,7 @@ internal sealed class Parser(SyntaxFactory syntaxFactory)
         }
     }
 
-    private bool IsTypeReferenceStart()
+    private bool CurrentIsTypeReferenceStart()
     {
         return _current.Kind
             is SyntaxKind.F32Keyword
@@ -398,7 +398,7 @@ internal sealed class Parser(SyntaxFactory syntaxFactory)
         var openParenthesis = Match(SyntaxKind.OpenParenthesisToken);
         var parameters = ParseParameterDeclarations();
         var closeParenthesis = Match(SyntaxKind.CloseParenthesisToken);
-        var returnType = IsTypeReferenceStart() ? ParseTypeReference() : null;
+        var returnType = CurrentIsTypeReferenceStart() ? ParseTypeReference() : null;
         var block = ParseBlockStatement();
         return _syntaxFactory.FunctionDefinition(
             slot,
@@ -417,8 +417,7 @@ internal sealed class Parser(SyntaxFactory syntaxFactory)
     private SyntaxList<ParameterDeclarationSyntax> ParseParameterDeclarations()
     {
         SyntaxListBuilder<ParameterDeclarationSyntax> parameters = new();
-
-        while (_current.Kind is not SyntaxKind.CloseParenthesisToken and not SyntaxKind.EndOfFileToken)
+        while (CurrentIsNotDelimiter(SyntaxKind.CloseParenthesisToken))
         {
             var parameter = ParseParameterDeclaration();
             parameters.Add(parameter);
@@ -451,7 +450,7 @@ internal sealed class Parser(SyntaxFactory syntaxFactory)
         if (_current.Kind == SyntaxKind.SelfKeyword)
         {
             var selfKeyword = Match(SyntaxKind.SelfKeyword);
-            var optionalType = IsTypeReferenceStart() ? ParseTypeReference() : null;
+            var optionalType = CurrentIsTypeReferenceStart() ? ParseTypeReference() : null;
             return _syntaxFactory.SelfParameterDeclaration(mutableKeyword, null, selfKeyword, optionalType);
         }
 
@@ -472,9 +471,13 @@ internal sealed class Parser(SyntaxFactory syntaxFactory)
         }
 
         var openBrace = Match(SyntaxKind.OpenBraceToken);
-        MatchNewLine();
+        var isMultiline = _current.Kind == SyntaxKind.NewLineToken;
+        if (isMultiline)
+        {
+            Advance();
+        }
 
-        while (_current.Kind is not SyntaxKind.EndOfFileToken and not SyntaxKind.CloseBraceToken)
+        while (CurrentIsNotDelimiter(SyntaxKind.CloseBraceToken))
         {
             var startToken = _current;
 
@@ -487,6 +490,13 @@ internal sealed class Parser(SyntaxFactory syntaxFactory)
                 Advance();
                 continue;
             }
+
+            if (!isMultiline)
+            {
+                break;
+            }
+
+            MatchNewLine();
         }
 
         var closeBrace = Match(SyntaxKind.CloseBraceToken);
@@ -512,7 +522,7 @@ internal sealed class Parser(SyntaxFactory syntaxFactory)
         var letKeyword = Match(SyntaxKind.LetKeyword);
         var mutableKeyword = _current.Kind == SyntaxKind.MutKeyword ? Advance() : null;
         var identifier = MatchIdentifier();
-        var type = IsTypeReferenceStart() ? ParseTypeReference() : null;
+        var type = CurrentIsTypeReferenceStart() ? ParseTypeReference() : null;
         InitializerSyntax? initializer = null;
         if (_current.Kind == SyntaxKind.EqualsToken)
         {
@@ -592,11 +602,10 @@ internal sealed class Parser(SyntaxFactory syntaxFactory)
     {
         var returnKeyword = Match(SyntaxKind.ReturnKeyword);
         var expression = ParseExpression();
-        MatchNewLine();
         return _syntaxFactory.ReturnStatement(returnKeyword, expression);
     }
 
-    // expression = literal | identifier-expression | call-expression | unary-expression | binary-expression
+    // expression = literal | identifier-expression | call-expression | struct-creation-expression | unary-expression | binary-expression
     private ExpressionSyntax ParseExpression()
     {
         return ParseBinaryExpression();
@@ -645,29 +654,28 @@ internal sealed class Parser(SyntaxFactory syntaxFactory)
     }
 
     // call-expression = primary-expression '(' arguments? ')'
-    // arguments = expression ((',' expression)+ ','?)?
     private ExpressionSyntax ParseCallExpression()
     {
-        var expression = ParsePrimary();
+        var left = ParsePrimary();
         if (_current.Kind != SyntaxKind.OpenParenthesisToken)
         {
-            return expression;
+            return left;
         }
 
         var openParenthesis = Advance();
         var arguments = ParseArguments();
         var closeParenthesis = Match(SyntaxKind.CloseParenthesisToken);
-        return _syntaxFactory.CallExpression(expression, openParenthesis, arguments, closeParenthesis);
+        return _syntaxFactory.CallExpression(left, openParenthesis, arguments, closeParenthesis);
     }
 
+    // arguments = expression ((',' expression)+ ','?)?
     private SyntaxList<ExpressionSyntax> ParseArguments()
     {
         SyntaxListBuilder<ExpressionSyntax> arguments = new();
-        while (_current.Kind is not SyntaxKind.CloseParenthesisToken and not SyntaxKind.EndOfFileToken)
+        while (CurrentIsNotDelimiter(SyntaxKind.CloseParenthesisToken))
         {
             var argument = ParseExpression();
             arguments.Add(argument);
-
             if (_current.Kind == SyntaxKind.CommaToken)
             {
                 Advance();
@@ -687,6 +695,9 @@ internal sealed class Parser(SyntaxFactory syntaxFactory)
     {
         switch (_current.Kind)
         {
+            case SyntaxKind.DotToken:
+                return ParseStructCreationExpression();
+
             case SyntaxKind.IntegerLiteral:
             case SyntaxKind.TrueKeyword:
             case SyntaxKind.FalseKeyword:
@@ -707,6 +718,55 @@ internal sealed class Parser(SyntaxFactory syntaxFactory)
                 _diagnostics.AddError(_current, DiagnosticMessages.ExpressionExpected);
                 return _syntaxFactory.MissingExpression(_current);
         }
+    }
+
+    // struct-creation-expression = '.' '{' NL? (field-initialization (NL field-initialization)*)? '}'
+    // field-initialization = ID ('=' expression)?
+    private StructCreationExpressionSyntax ParseStructCreationExpression()
+    {
+        var dot = Match(SyntaxKind.DotToken);
+        var openBrace = Match(SyntaxKind.OpenBraceToken);
+        var isMultiline = _current.Kind == SyntaxKind.NewLineToken;
+        if (isMultiline)
+        {
+            Advance();
+        }
+
+        if (_current.Kind == SyntaxKind.CloseBraceToken)
+        {
+            return _syntaxFactory.StructCreationExpression(
+                dot,
+                openBrace,
+                new SyntaxList<StructCreationFieldInitializerSyntax>(),
+                Advance()
+            );
+        }
+
+        SyntaxListBuilder<StructCreationFieldInitializerSyntax> fields = new();
+        while (CurrentIsNotDelimiter(SyntaxKind.CloseBraceToken))
+        {
+            var identifier = MatchIdentifier();
+            InitializerSyntax? initializer = null;
+            if (_current.Kind == SyntaxKind.EqualsToken)
+            {
+                var operatorToken = Advance();
+                var expression = ParseExpression();
+                initializer = _syntaxFactory.Initializer(operatorToken, expression);
+            }
+
+            var field = _syntaxFactory.StructCreationFieldInitializer(identifier, initializer);
+            fields.Add(field);
+
+            if (!isMultiline)
+            {
+                break;
+            }
+
+            MatchNewLine();
+        }
+
+        var closeBrace = Match(SyntaxKind.CloseBraceToken);
+        return _syntaxFactory.StructCreationExpression(dot, openBrace, fields.ToSyntaxList(), closeBrace);
     }
 
     private Token Advance()
@@ -750,16 +810,17 @@ internal sealed class Parser(SyntaxFactory syntaxFactory)
         return _syntaxFactory.MissingIdentifier(_current.Location.Start, _current.Location.Length);
     }
 
-    private Token MatchNewLine()
+    private void MatchNewLine()
     {
         if (_current.Kind == SyntaxKind.NewLineToken)
         {
-            return Advance();
+            Advance();
+            return;
         }
 
         if (_current.Kind == SyntaxKind.EndOfFileToken)
         {
-            return _current;
+            return;
         }
 
         _diagnostics.AddError(
@@ -768,7 +829,10 @@ internal sealed class Parser(SyntaxFactory syntaxFactory)
             SyntaxFacts.GetKindDisplayText(SyntaxKind.NewLineToken),
             _current.ToString()
         );
+    }
 
-        return _syntaxFactory.MissingToken(SyntaxKind.NewLineToken, _current.Location.Start, _current.Location.Length);
+    private bool CurrentIsNotDelimiter(SyntaxKind delimiter)
+    {
+        return _current.Kind != delimiter && _current.Kind != SyntaxKind.EndOfFileToken;
     }
 }

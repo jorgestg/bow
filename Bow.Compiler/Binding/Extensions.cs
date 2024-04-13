@@ -18,4 +18,14 @@ internal static class Extensions
 
         return null;
     }
+
+    public static T? ElementAtOrDefault<T>(this ImmutableArray<T> array, int index)
+    {
+        if (index < 0 || index >= array.Length)
+        {
+            return default;
+        }
+
+        return array[index];
+    }
 }
