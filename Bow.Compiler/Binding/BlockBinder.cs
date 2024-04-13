@@ -501,19 +501,12 @@ internal sealed class BlockBinder(Binder parent, FunctionSymbol function) : Bind
         for (var i = 0; i < syntax.Arguments.Count; i++)
         {
             var parameter = function.Parameters.ElementAtOrDefault(i);
-            if (parameter != null)
-            {
-                _ambientTypeStack.Push(parameter.Type);
-            }
+            _ambientTypeStack.Push(parameter == null ? PlaceholderTypeSymbol.UnknownType : parameter.Type);
 
             var argumentSyntax = syntax.Arguments[i];
             var argument = BindExpression(argumentSyntax, diagnostics);
             arguments.Add(argument);
-
-            if (parameter != null)
-            {
-                _ambientTypeStack.Pop();
-            }
+            _ambientTypeStack.Pop();
         }
 
         return new BoundCallExpression(syntax, function, arguments.MoveToImmutable());
