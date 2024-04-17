@@ -36,9 +36,6 @@ internal sealed class BlockBinder(Binder parent, FunctionSymbol function) : Bind
 
     private AmbientTypeStack _ambientTypeStack = new(function.ReturnType);
 
-    // If we're binding an expression on the RHS we need to make sure locals are initialized
-    private bool _bindingLeftHandSide = false;
-
     private Dictionary<string, LocalSymbol>? _lazyLocals;
     private Dictionary<string, LocalSymbol> Locals => _lazyLocals ??= [];
 
@@ -127,15 +124,15 @@ internal sealed class BlockBinder(Binder parent, FunctionSymbol function) : Bind
     {
         var condition = BindExpression(syntax.Condition, diagnostics);
         var then = BindBlockStatement(syntax.Then, diagnostics);
-        ImmutableArray<BoundElseIfClause> elseIfs;
+        ImmutableArray<BoundElseIfBlock> elseIfs;
         if (syntax.ElseIfs.Count > 0)
         {
-            var elseIfsBuilder = ImmutableArray.CreateBuilder<BoundElseIfClause>(syntax.ElseIfs.Count);
+            var elseIfsBuilder = ImmutableArray.CreateBuilder<BoundElseIfBlock>(syntax.ElseIfs.Count);
             foreach (var elseIfSyntax in syntax.ElseIfs)
             {
                 var elseIfCondition = BindExpression(elseIfSyntax.Condition, diagnostics);
                 var elseIfThen = BindBlockStatement(elseIfSyntax.Body, diagnostics);
-                elseIfsBuilder.Add(new BoundElseIfClause(elseIfCondition, elseIfThen));
+                elseIfsBuilder.Add(new BoundElseIfBlock(elseIfCondition, elseIfThen));
             }
 
             elseIfs = elseIfsBuilder.MoveToImmutable();
@@ -195,10 +192,7 @@ internal sealed class BlockBinder(Binder parent, FunctionSymbol function) : Bind
         DiagnosticBag diagnostics
     )
     {
-        var previousBindingLeftHandSide = _bindingLeftHandSide;
-        _bindingLeftHandSide = true;
         var assignee = BindExpression(syntax.Assignee, diagnostics);
-        _bindingLeftHandSide = previousBindingLeftHandSide;
 
         var isAssignable = TryGetReferencedSymbol(assignee, out var referencedSymbol);
         _ambientTypeStack.Push(isAssignable ? assignee.Type : PlaceholderTypeSymbol.UnknownType);
@@ -462,10 +456,6 @@ internal sealed class BlockBinder(Binder parent, FunctionSymbol function) : Bind
             diagnostics.AddError(syntax.Identifier, DiagnosticMessages.NameNotFound, name);
             symbol = MissingSymbol.Instance;
         }
-        else if (!_bindingLeftHandSide && symbol is LocalSymbol { IsInitialized: false })
-        {
-            diagnostics.AddError(syntax.Identifier, DiagnosticMessages.LocalVariableIsNotInitialized, name);
-        }
 
         return new BoundIdentifierExpression(syntax, symbol);
     }
@@ -615,7 +605,7 @@ internal sealed class BlockBinder(Binder parent, FunctionSymbol function) : Bind
             if (!initializer.Type.IsAssignableTo(field.Type))
             {
                 diagnostics.AddError(
-                    (SyntaxNode?)fieldInitializerSyntax.Initializer?.Expression ?? fieldInitializerSyntax.Identifier,
+                    (SyntaxNode?)fieldInitializerSyntax.Initializer?.Operator ?? fieldInitializerSyntax.Identifier,
                     DiagnosticMessages.TypeMismatch,
                     field.Type.Name,
                     initializer.Type.Name
@@ -626,7 +616,7 @@ internal sealed class BlockBinder(Binder parent, FunctionSymbol function) : Bind
                 initializer = CreateImplicitCastExpression(initializer, field.Type);
             }
 
-            var fieldInitializer = new BoundFieldInitializer(field, initializer);
+            BoundFieldInitializer fieldInitializer = new(field, initializer);
             fieldInitializers.Add(fieldInitializer);
         }
 

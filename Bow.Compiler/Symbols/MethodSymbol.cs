@@ -5,16 +5,14 @@ using Bow.Compiler.Syntax;
 
 namespace Bow.Compiler.Symbols;
 
-public sealed class MethodSymbol(
-    TypeSymbol container,
-    FunctionDefinitionSyntax syntax,
-    TypeSymbol returnType
-) : FunctionSymbol
+public sealed class MethodSymbol(TypeSymbol container, MethodDefinitionSyntax syntax, TypeSymbol returnType)
+    : FunctionSymbol,
+        IMemberSymbol
 {
     private readonly DiagnosticBag _diagnosticBag = new();
 
     public override string Name => Syntax.Identifier.IdentifierText;
-    public override FunctionDefinitionSyntax Syntax { get; } = syntax;
+    public override MethodDefinitionSyntax Syntax { get; } = syntax;
     public override ModuleSymbol Module => Container.Module;
 
     private FunctionBinder? _lazyBinder;
@@ -48,9 +46,9 @@ public sealed class MethodSymbol(
 
     private ImmutableArray<Diagnostic> _lazyDiagnostics;
     public ImmutableArray<Diagnostic> Diagnostics =>
-        _lazyDiagnostics.IsDefault
-            ? _lazyDiagnostics = _diagnosticBag.ToImmutableArray()
-            : _lazyDiagnostics;
+        _lazyDiagnostics.IsDefault ? _lazyDiagnostics = _diagnosticBag.ToImmutableArray() : _lazyDiagnostics;
+
+    MemberDeclarationSyntax IMemberSymbol.Syntax => Syntax;
 
     private ImmutableArray<ParameterSymbol> CreateParameters()
     {
@@ -71,8 +69,7 @@ public sealed class MethodSymbol(
                 case SyntaxKind.SelfParameterDeclaration:
                 {
                     var self = (SelfParameterDeclarationSyntax)syntax;
-                    var type =
-                        self.Star == null ? Container : new PointerTypeSymbol(self, Container);
+                    var type = self.Star == null ? Container : new PointerTypeSymbol(self, Container);
 
                     var parameter = new SelfParameterSymbol(this, self, type);
                     builder.Add(parameter);
@@ -94,10 +91,7 @@ public sealed class MethodSymbol(
         {
             if (parameter is SelfParameterSymbol self && self.Syntax.Type != null)
             {
-                _diagnosticBag.AddError(
-                    self.Syntax.Type,
-                    DiagnosticMessages.SelfParameterCannotHaveAType
-                );
+                _diagnosticBag.AddError(self.Syntax.Type, DiagnosticMessages.SelfParameterCannotHaveAType);
 
                 continue;
             }
@@ -107,11 +101,7 @@ public sealed class MethodSymbol(
                 continue;
             }
 
-            _diagnosticBag.AddError(
-                parameter.Syntax,
-                DiagnosticMessages.NameIsAlreadyDefined,
-                parameter.Name
-            );
+            _diagnosticBag.AddError(parameter.Syntax, DiagnosticMessages.NameIsAlreadyDefined, parameter.Name);
         }
 
         return map.ToFrozenDictionary();

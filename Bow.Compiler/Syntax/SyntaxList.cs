@@ -67,6 +67,21 @@ public readonly struct SyntaxList<TNode>(TNode[] nodes) : IEnumerable<TNode>
 
     public int Count => _nodes.Length;
 
+    public SyntaxList<T> OfType<T>()
+        where T : TNode
+    {
+        SyntaxListBuilder<T> builder = new();
+        foreach (var node in _nodes)
+        {
+            if (node is T nodeAsT)
+            {
+                builder.Add(nodeAsT);
+            }
+        }
+
+        return builder.ToSyntaxList();
+    }
+
     public ArraySegment<TNode>.Enumerator GetEnumerator()
     {
         return new ArraySegment<TNode>(_nodes).GetEnumerator();

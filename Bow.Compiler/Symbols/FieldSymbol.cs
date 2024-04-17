@@ -2,7 +2,9 @@ using Bow.Compiler.Syntax;
 
 namespace Bow.Compiler.Symbols;
 
-public sealed class FieldSymbol(StructSymbol @struct, FieldDeclarationSyntax syntax, TypeSymbol type) : Symbol
+public sealed class FieldSymbol(StructSymbol @struct, FieldDeclarationSyntax syntax, TypeSymbol type)
+    : Symbol,
+        IMemberSymbol
 {
     public override string Name => Syntax.Identifier.IdentifierText;
 
@@ -22,4 +24,6 @@ public sealed class FieldSymbol(StructSymbol @struct, FieldDeclarationSyntax syn
 
     public StructSymbol Struct { get; } = @struct;
     public TypeSymbol Type { get; } = type;
+
+    MemberDeclarationSyntax IMemberSymbol.Syntax => Syntax;
 }

@@ -64,7 +64,6 @@
     "StructDefinition": {
       "extends": "Item",
       "children": {
-        "Slot": "int",
         "AccessModifier": {
           "type": "Token",
           "optional": true,
@@ -73,24 +72,13 @@
         "Keyword": "Token",
         "Identifier": { "type": "IdentifierToken", "override": true },
         "OpenBrace": "Token",
-        "Fields": { "type": "FieldDeclaration", "array": true },
-        "Methods": { "type": "FunctionDefinition", "array": true },
+        "Members": { "type": "MemberDeclaration", "array": true },
         "CloseBrace": "Token"
-      }
-    },
-    "FieldDeclaration": {
-      "children": {
-        "Slot": "int",
-        "AccessModifier": { "type": "Token", "optional": true },
-        "MutKeyword": { "type": "Token", "optional": true },
-        "Identifier": "IdentifierToken",
-        "Type": "TypeReference"
       }
     },
     "EnumDefinition": {
       "extends": "Item",
       "children": {
-        "Slot": "int",
         "AccessModifier": {
           "type": "Token",
           "optional": true,
@@ -99,32 +87,13 @@
         "Keyword": "Token",
         "Identifier": { "type": "IdentifierToken", "override": true },
         "OpenBrace": "Token",
-        "Cases": { "type": "EnumCaseDeclaration", "array": true },
-        "Methods": { "type": "FunctionDefinition", "array": true },
+        "Members": { "type": "MemberDeclaration", "array": true },
         "CloseBrace": "Token"
-      }
-    },
-    "EnumCaseDeclaration": {
-      "children": {
-        "Slot": "int",
-        "Identifier": "IdentifierToken",
-        "Argument": {
-          "type": "EnumCaseArgument",
-          "optional": true
-        }
-      }
-    },
-    "EnumCaseArgument": {
-      "children": {
-        "OpenParenthesis": "Token",
-        "TypeReference": "TypeReference",
-        "CloseParenthesis": "Token"
       }
     },
     "FunctionDefinition": {
       "extends": "Item",
       "children": {
-        "Slot": "int",
         "AccessModifier": {
           "type": "Token",
           "optional": true,
@@ -160,6 +129,51 @@
         "Star": { "type": "Token", "optional": true },
         "Keyword": "Token",
         "Type": { "type": "TypeReference", "optional": true }
+      }
+    },
+    "MemberDeclaration": {
+      "abstract": true,
+      "children": {
+        "Identifier": "IdentifierToken"
+      }
+    },
+    "FieldDeclaration": {
+      "extends": "MemberDeclaration",
+      "children": {
+        "AccessModifier": { "type": "Token", "optional": true },
+        "MutKeyword": { "type": "Token", "optional": true },
+        "Identifier": { "type": "IdentifierToken", "override": true },
+        "Type": "TypeReference"
+      }
+    },
+    "MethodDefinition": {
+      "extends": "MemberDeclaration",
+      "children": {
+        "AccessModifier": { "type": "Token", "optional": true },
+        "Keyword": "Token",
+        "Identifier": { "type": "IdentifierToken", "override": true },
+        "OpenParenthesis": "Token",
+        "Parameters": { "type": "ParameterDeclaration", "array": true },
+        "CloseParenthesis": "Token",
+        "ReturnType": { "type": "TypeReference", "optional": true },
+        "Body": "BlockStatement"
+      }
+    },
+    "EnumCaseDeclaration": {
+      "extends": "MemberDeclaration",
+      "children": {
+        "Identifier": { "type": "IdentifierToken", "override": true },
+        "Argument": {
+          "type": "EnumCaseArgument",
+          "optional": true
+        }
+      }
+    },
+    "EnumCaseArgument": {
+      "children": {
+        "OpenParenthesis": "Token",
+        "TypeReference": "TypeReference",
+        "CloseParenthesis": "Token"
       }
     },
     "Initializer": {
@@ -208,11 +222,11 @@
         "Keyword": "Token",
         "Condition": "Expression",
         "Then": "BlockStatement",
-        "ElseIfs": { "type": "ElseIfClause", "array": true },
-        "Else": { "type": "ElseClause", "optional": true }
+        "ElseIfs": { "type": "ElseIfBlock", "array": true },
+        "Else": { "type": "ElseBlock", "optional": true }
       }
     },
-    "ElseIfClause": {
+    "ElseIfBlock": {
       "children": {
         "ElseKeyword": "Token",
         "IfKeyword": "Token",
@@ -220,7 +234,7 @@
         "Body": "BlockStatement"
       }
     },
-    "ElseClause": {
+    "ElseBlock": {
       "children": {
         "ElseKeyword": "Token",
         "Body": "BlockStatement"

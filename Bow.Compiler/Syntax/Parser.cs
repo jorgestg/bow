@@ -46,12 +46,8 @@ internal sealed class Parser(SyntaxFactory syntaxFactory)
 
     private bool CurrentIsItemDeclarationStart()
     {
-        return _current.Kind switch
-        {
-            SyntaxKind.EnumKeyword or SyntaxKind.FunKeyword or SyntaxKind.StructKeyword => true,
-            _ when _current.ContextualKeywordKind == ContextualKeywordKind.Data => true,
-            _ => false,
-        };
+        return _current.Kind is SyntaxKind.EnumKeyword or SyntaxKind.FunKeyword or SyntaxKind.StructKeyword
+            || _current.ContextualKeywordKind == ContextualKeywordKind.Data;
     }
 
     // mod-clause = 'mod' ID NL
@@ -167,7 +163,6 @@ internal sealed class Parser(SyntaxFactory syntaxFactory)
     {
         SyntaxListBuilder<ItemSyntax> items = new();
 
-        var slot = 0;
         Token? accessModifier = modKeyword;
         while (true)
         {
@@ -198,7 +193,7 @@ internal sealed class Parser(SyntaxFactory syntaxFactory)
 
                 case SyntaxKind.EnumKeyword:
                 {
-                    items.Add(ParseEnumDefinition(slot++, accessModifier));
+                    items.Add(ParseEnumDefinition(accessModifier));
                     MatchNewLine();
                     accessModifier = null;
                     break;
@@ -206,7 +201,7 @@ internal sealed class Parser(SyntaxFactory syntaxFactory)
 
                 case SyntaxKind.FunKeyword:
                 {
-                    items.Add(ParseFunctionDefinition(slot++, accessModifier));
+                    items.Add(ParseFunctionDefinition(accessModifier));
                     MatchNewLine();
                     accessModifier = null;
                     break;
@@ -215,7 +210,7 @@ internal sealed class Parser(SyntaxFactory syntaxFactory)
                 case SyntaxKind.StructKeyword:
                 case SyntaxKind.IdentifierToken when _current.ContextualKeywordKind == ContextualKeywordKind.Data:
                 {
-                    items.Add(ParseStructDefinition(slot++, accessModifier, keyword: Advance()));
+                    items.Add(ParseStructDefinition(accessModifier, keyword: Advance()));
                     MatchNewLine();
                     accessModifier = null;
                     break;
@@ -234,34 +229,23 @@ internal sealed class Parser(SyntaxFactory syntaxFactory)
     // struct-definition = item-access-modifier? struct-keyword ID '{' member-declarations? '}'
     // struct-keyword = 'struct' | 'data'
     // member-declarations = NL member-declaration (NL member-declaration)* NL
-    private StructDefinitionSyntax ParseStructDefinition(int slot, Token? accessModifier, Token keyword)
+    private StructDefinitionSyntax ParseStructDefinition(Token? accessModifier, Token keyword)
     {
         var identifier = MatchIdentifier();
         var openBrace = Match(SyntaxKind.OpenBraceToken);
         MatchNewLine();
 
-        var (fields, methods) = ParseMemberDeclarations();
+        var members = ParseMemberDeclarations();
         var closeBrace = Match(SyntaxKind.CloseBraceToken);
-        return _syntaxFactory.StructDefinition(
-            slot,
-            accessModifier,
-            keyword,
-            identifier,
-            openBrace,
-            fields,
-            methods,
-            closeBrace
-        );
+        return _syntaxFactory.StructDefinition(accessModifier, keyword, identifier, openBrace, members, closeBrace);
     }
 
     // member-access-modifier = 'pub' | 'pkg' | 'mod' | 'file'
     // member-declaration = field-declaration | method-definition
-    private (SyntaxList<FieldDeclarationSyntax>, SyntaxList<FunctionDefinitionSyntax>) ParseMemberDeclarations()
+    private SyntaxList<MemberDeclarationSyntax> ParseMemberDeclarations()
     {
-        SyntaxListBuilder<FieldDeclarationSyntax> fields = new();
-        SyntaxListBuilder<FunctionDefinitionSyntax> methods = new();
+        SyntaxListBuilder<MemberDeclarationSyntax> members = new();
 
-        var slot = 0;
         Token? accessModifier = null;
         while (true)
         {
@@ -280,12 +264,12 @@ internal sealed class Parser(SyntaxFactory syntaxFactory)
 
                 case SyntaxKind.MutKeyword:
                 case SyntaxKind.IdentifierToken:
-                    fields.Add(ParseFieldDeclaration(slot++, accessModifier));
+                    members.Add(ParseFieldDeclaration(accessModifier));
                     MatchNewLine();
                     continue;
 
                 case SyntaxKind.FunKeyword:
-                    methods.Add(ParseFunctionDefinition(slot++, accessModifier));
+                    members.Add(ParseMethodDefinition(accessModifier));
                     MatchNewLine();
                     continue;
 
@@ -296,47 +280,36 @@ internal sealed class Parser(SyntaxFactory syntaxFactory)
                     continue;
             }
 
-            return (fields.ToSyntaxList(), methods.ToSyntaxList());
+            return members.ToSyntaxList();
         }
     }
 
     // field-declaration = member-access-modifier? 'mut'? ID type-reference
-    private FieldDeclarationSyntax ParseFieldDeclaration(int slot, Token? accessModifier)
+    private FieldDeclarationSyntax ParseFieldDeclaration(Token? accessModifier)
     {
         var mutableKeyword = _current.Kind == SyntaxKind.MutKeyword ? Advance() : null;
         var identifier = MatchIdentifier();
         var type = ParseTypeReference();
-        return _syntaxFactory.FieldDeclaration(slot, accessModifier, mutableKeyword, identifier, type);
+        return _syntaxFactory.FieldDeclaration(accessModifier, mutableKeyword, identifier, type);
     }
 
     // enum-definition = item-access-modifier 'enum' ID '{' enum-member-declarations '}'
     // enum-member-declarations = NL enum-member-declaration (NL enum-member-declaration)* NL
-    private EnumDefinitionSyntax ParseEnumDefinition(int slot, Token? accessModifier)
+    private EnumDefinitionSyntax ParseEnumDefinition(Token? accessModifier)
     {
         var enumKeyword = Match(SyntaxKind.EnumKeyword);
         var identifier = MatchIdentifier();
         var openBrace = Match(SyntaxKind.OpenBraceToken);
-        var (cases, methods) = ParseEnumMemberDeclarations();
+        var members = ParseEnumMemberDeclarations();
         var closeBrace = Match(SyntaxKind.CloseBraceToken);
-        return _syntaxFactory.EnumDefinition(
-            slot,
-            accessModifier,
-            enumKeyword,
-            identifier,
-            openBrace,
-            cases,
-            methods,
-            closeBrace
-        );
+        return _syntaxFactory.EnumDefinition(accessModifier, enumKeyword, identifier, openBrace, members, closeBrace);
     }
 
     // enum-member-declaration = enum-case-declaration | method-definition
-    private (SyntaxList<EnumCaseDeclarationSyntax>, SyntaxList<FunctionDefinitionSyntax>) ParseEnumMemberDeclarations()
+    private SyntaxList<MemberDeclarationSyntax> ParseEnumMemberDeclarations()
     {
-        SyntaxListBuilder<EnumCaseDeclarationSyntax> cases = new();
-        SyntaxListBuilder<FunctionDefinitionSyntax> methods = new();
+        SyntaxListBuilder<MemberDeclarationSyntax> members = new();
 
-        var slot = 0;
         while (true)
         {
             switch (_current.Kind)
@@ -349,12 +322,12 @@ internal sealed class Parser(SyntaxFactory syntaxFactory)
                 case SyntaxKind.ModKeyword:
                 case SyntaxKind.FunKeyword:
                 case SyntaxKind.IdentifierToken when _current.ContextualKeywordKind == ContextualKeywordKind.File:
-                    methods.Add(ParseFunctionDefinition(slot++, null));
+                    members.Add(ParseMethodDefinition(null));
                     MatchNewLine();
                     continue;
 
                 case SyntaxKind.IdentifierToken:
-                    cases.Add(ParseEnumCaseDeclaration(slot));
+                    members.Add(ParseEnumCaseDeclaration());
                     MatchNewLine();
                     continue;
 
@@ -365,33 +338,31 @@ internal sealed class Parser(SyntaxFactory syntaxFactory)
                     continue;
             }
 
-            return (cases.ToSyntaxList(), methods.ToSyntaxList());
+            return members.ToSyntaxList();
         }
     }
 
     // enum-case-declaration = ID ('(' type-reference ')')?
-    private EnumCaseDeclarationSyntax ParseEnumCaseDeclaration(int slot)
+    private EnumCaseDeclarationSyntax ParseEnumCaseDeclaration()
     {
         var identifier = MatchIdentifier();
         if (_current.Kind != SyntaxKind.OpenParenthesisToken)
         {
-            return _syntaxFactory.EnumCaseDeclaration(slot, identifier, null);
+            return _syntaxFactory.EnumCaseDeclaration(identifier, null);
         }
 
         var openParenthesis = Match(SyntaxKind.OpenParenthesisToken);
         var type = ParseTypeReference();
         var closeParenthesis = Match(SyntaxKind.CloseParenthesisToken);
         return _syntaxFactory.EnumCaseDeclaration(
-            slot,
             identifier,
             _syntaxFactory.EnumCaseArgument(openParenthesis, type, closeParenthesis)
         );
     }
 
-    // method-definition = member-access-modifier? function-definition
     // function-item-definition = item-access-modifier? function-declaration
     // function-definition = 'fun' ID '(' parameter-declarations? ')' type-reference? block
-    private FunctionDefinitionSyntax ParseFunctionDefinition(int slot, Token? accessModifier)
+    private FunctionDefinitionSyntax ParseFunctionDefinition(Token? accessModifier)
     {
         var funKeyword = Match(SyntaxKind.FunKeyword);
         var identifier = MatchIdentifier();
@@ -401,7 +372,28 @@ internal sealed class Parser(SyntaxFactory syntaxFactory)
         var returnType = CurrentIsTypeReferenceStart() ? ParseTypeReference() : null;
         var block = ParseBlockStatement();
         return _syntaxFactory.FunctionDefinition(
-            slot,
+            accessModifier,
+            funKeyword,
+            identifier,
+            openParenthesis,
+            parameters,
+            closeParenthesis,
+            returnType,
+            block
+        );
+    }
+
+    // method-definition = member-access-modifier? function-definition
+    private MethodDefinitionSyntax ParseMethodDefinition(Token? accessModifier)
+    {
+        var funKeyword = Match(SyntaxKind.FunKeyword);
+        var identifier = MatchIdentifier();
+        var openParenthesis = Match(SyntaxKind.OpenParenthesisToken);
+        var parameters = ParseParameterDeclarations();
+        var closeParenthesis = Match(SyntaxKind.CloseParenthesisToken);
+        var returnType = CurrentIsTypeReferenceStart() ? ParseTypeReference() : null;
+        var block = ParseBlockStatement();
+        return _syntaxFactory.MethodDefinition(
             accessModifier,
             funKeyword,
             identifier,
@@ -571,30 +563,30 @@ internal sealed class Parser(SyntaxFactory syntaxFactory)
                 ifKeyword,
                 condition,
                 thenBlock,
-                new SyntaxList<ElseIfClauseSyntax>(),
+                new SyntaxList<ElseIfBlockSyntax>(),
                 null
             );
         }
 
-        SyntaxListBuilder<ElseIfClauseSyntax> elseIfClauses = new();
+        SyntaxListBuilder<ElseIfBlockSyntax> elseIfBlocks = new();
         while (_current.Kind == SyntaxKind.ElseKeyword)
         {
             var elseKeyword = Advance();
             var elseIfKeyword = Match(SyntaxKind.IfKeyword);
             var elseIfCondition = ParseExpression();
             var elseIfBlock = ParseBlockStatement();
-            elseIfClauses.Add(_syntaxFactory.ElseIfClause(elseKeyword, elseIfKeyword, elseIfCondition, elseIfBlock));
+            elseIfBlocks.Add(_syntaxFactory.ElseIfBlock(elseKeyword, elseIfKeyword, elseIfCondition, elseIfBlock));
         }
 
-        ElseClauseSyntax? elseClause = null;
+        ElseBlockSyntax? elseBlock = null;
         if (_current.Kind == SyntaxKind.ElseKeyword)
         {
             var elseKeyword = Advance();
-            var elseBlock = ParseBlockStatement();
-            elseClause = _syntaxFactory.ElseClause(elseKeyword, elseBlock);
+            var elseBody = ParseBlockStatement();
+            elseBlock = _syntaxFactory.ElseBlock(elseKeyword, elseBody);
         }
 
-        return _syntaxFactory.IfStatement(ifKeyword, condition, thenBlock, elseIfClauses.ToSyntaxList(), elseClause);
+        return _syntaxFactory.IfStatement(ifKeyword, condition, thenBlock, elseIfBlocks.ToSyntaxList(), elseBlock);
     }
 
     // return-statement = 'return' expression

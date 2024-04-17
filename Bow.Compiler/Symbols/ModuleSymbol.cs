@@ -5,11 +5,8 @@ using Bow.Compiler.Syntax;
 
 namespace Bow.Compiler.Symbols;
 
-public sealed class ModuleSymbol(
-    PackageSymbol package,
-    string name,
-    ImmutableArray<CompilationUnitSyntax> roots
-) : Symbol
+public sealed class ModuleSymbol(PackageSymbol package, string name, ImmutableArray<CompilationUnitSyntax> roots)
+    : Symbol
 {
     private readonly DiagnosticBag _diagnosticBag = new();
 
@@ -30,21 +27,18 @@ public sealed class ModuleSymbol(
     public ImmutableArray<CompilationUnitSyntax> Roots { get; } = roots;
 
     private ImmutableArray<TypeSymbol> _lazyTypes;
-    public ImmutableArray<TypeSymbol> Types =>
-        _lazyTypes.IsDefault ? _lazyTypes = CreateTypes() : _lazyTypes;
+    public ImmutableArray<TypeSymbol> Types => _lazyTypes.IsDefault ? _lazyTypes = CreateTypes() : _lazyTypes;
 
     private ImmutableArray<FunctionItemSymbol> _lazyFunctions;
     public ImmutableArray<FunctionItemSymbol> Functions =>
         _lazyFunctions.IsDefault ? _lazyFunctions = CreateFunctions() : _lazyFunctions;
 
-    private FrozenDictionary<string, Symbol>? _lazyMembers;
-    public FrozenDictionary<string, Symbol> MembersMap => _lazyMembers ??= CreateMembersMap();
+    private FrozenDictionary<string, IItemSymbol>? _lazyMembers;
+    public FrozenDictionary<string, IItemSymbol> MembersMap => _lazyMembers ??= CreateMembersMap();
 
     private ImmutableArray<Diagnostic> _lazyDiagnostics;
     public ImmutableArray<Diagnostic> Diagnostics =>
-        _lazyDiagnostics.IsDefault
-            ? _lazyDiagnostics = _diagnosticBag.ToImmutableArray()
-            : _lazyDiagnostics;
+        _lazyDiagnostics.IsDefault ? _lazyDiagnostics = _diagnosticBag.ToImmutableArray() : _lazyDiagnostics;
 
     internal FileBinder GetFileBinder(SyntaxTree syntaxTree)
     {
@@ -78,15 +72,15 @@ public sealed class ModuleSymbol(
         {
             foreach (var item in root.Items)
             {
-                if (item is FunctionDefinitionSyntax)
+                if (item.Kind == SyntaxKind.FunctionDefinition)
                 {
                     continue;
                 }
 
-                TypeSymbol type = item switch
+                TypeSymbol type = item.Kind switch
                 {
-                    StructDefinitionSyntax s => new StructSymbol(this, s),
-                    EnumDefinitionSyntax s => new EnumSymbol(this, s),
+                    SyntaxKind.StructDefinition => new StructSymbol(this, (StructDefinitionSyntax)item),
+                    SyntaxKind.EnumDefinition => new EnumSymbol(this, (EnumDefinitionSyntax)item),
                     _ => throw new UnreachableException()
                 };
 
@@ -102,14 +96,10 @@ public sealed class ModuleSymbol(
         var builder = ImmutableArray.CreateBuilder<FunctionItemSymbol>();
         foreach (var root in Roots)
         {
-            foreach (var item in root.Items)
+            var functions = root.Items.OfType<FunctionDefinitionSyntax>();
+            foreach (var functionSyntax in functions)
             {
-                if (item is not FunctionDefinitionSyntax syntax)
-                {
-                    continue;
-                }
-
-                FunctionItemSymbol function = new(this, syntax);
+                FunctionItemSymbol function = new(this, functionSyntax);
                 builder.Add(function);
             }
         }
@@ -117,34 +107,36 @@ public sealed class ModuleSymbol(
         return builder.DrainToImmutable();
     }
 
-    private FrozenDictionary<string, Symbol> CreateMembersMap()
+    private FrozenDictionary<string, IItemSymbol> CreateMembersMap()
     {
-        Dictionary<string, Symbol> members = [];
-        foreach (var type in Types)
+        Dictionary<string, IItemSymbol> members = [];
+        foreach (var item in GetOrderedItems())
         {
-            if (members.TryAdd(type.Name, type))
+            if (members.TryAdd(item.Name, item))
             {
                 continue;
             }
 
-            var identifier = ((ItemSyntax)type.Syntax).Identifier;
-            _diagnosticBag.AddError(identifier, DiagnosticMessages.NameIsAlreadyDefined, type.Name);
-        }
-
-        foreach (var function in Functions)
-        {
-            if (members.TryAdd(function.Name, function))
-            {
-                continue;
-            }
-
-            _diagnosticBag.AddError(
-                function.Syntax.Identifier,
-                DiagnosticMessages.NameIsAlreadyDefined,
-                function.Name
-            );
+            var identifier = item.Syntax.Identifier;
+            _diagnosticBag.AddError(identifier, DiagnosticMessages.NameIsAlreadyDefined, item.Name);
         }
 
         return members.ToFrozenDictionary();
+    }
+
+    private IEnumerable<IItemSymbol> GetOrderedItems()
+    {
+        foreach (var itemSyntax in Syntax.Items)
+        {
+            yield return itemSyntax.Kind switch
+            {
+                SyntaxKind.EnumDefinition
+                or SyntaxKind.StructDefinition
+                    => (IItemSymbol)Types.FindBySyntax(itemSyntax)!,
+
+                SyntaxKind.FunctionDefinition => Functions.FindBySyntax(itemSyntax)!,
+                _ => throw new UnreachableException()
+            };
+        }
     }
 }

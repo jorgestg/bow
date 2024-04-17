@@ -10,12 +10,12 @@ internal sealed class ModuleBinder(ModuleSymbol module) : Binder(module.Package.
 
     public override Symbol? LookupMember(string name)
     {
-        return _module.MembersMap.GetValueOrDefault(name);
+        return (Symbol?)_module.MembersMap.GetValueOrDefault(name);
     }
 
     public override Symbol? Lookup(string name)
     {
-        return _module.MembersMap.TryGetValue(name, out var symbol) ? symbol : Parent.Lookup(name);
+        return _module.MembersMap.TryGetValue(name, out var symbol) ? (Symbol)symbol : Parent.Lookup(name);
     }
 
     public override Symbol BindName(NameSyntax syntax, DiagnosticBag diagnostics)
@@ -65,11 +65,7 @@ internal sealed class ModuleBinder(ModuleSymbol module) : Binder(module.Package.
             return right;
         }
 
-        diagnostics.AddError(
-            syntax.Parts[2],
-            DiagnosticMessages.NameIsNotAPackage,
-            syntax.Parts[2].IdentifierText
-        );
+        diagnostics.AddError(syntax.Parts[2], DiagnosticMessages.NameIsNotAPackage, syntax.Parts[2].IdentifierText);
 
         return null;
     }

@@ -1,8 +1,0 @@
-- I need to change the syntax node for struct and enum declarations to use a MemberSyntax superclass instead
-  of splitting fields and methods, that way I get rid of the slot hack.
-
-- Rename: Else [if] clause -> else [if] block
-
-- Struct creation expression on the parser and grammar
-
-- Remove isLHS from block

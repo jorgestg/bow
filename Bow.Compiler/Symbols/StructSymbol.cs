@@ -1,12 +1,11 @@
 using System.Collections.Frozen;
+using Bow.Compiler.Binding;
 using Bow.Compiler.Diagnostics;
 using Bow.Compiler.Syntax;
 
 namespace Bow.Compiler.Symbols;
 
-public sealed class StructSymbol(ModuleSymbol module, StructDefinitionSyntax syntax)
-    : TypeSymbol,
-        IItemSymbol
+public sealed class StructSymbol(ModuleSymbol module, StructDefinitionSyntax syntax) : TypeSymbol, IItemSymbol
 {
     private readonly DiagnosticBag _diagnosticBag = new();
 
@@ -21,32 +20,30 @@ public sealed class StructSymbol(ModuleSymbol module, StructDefinitionSyntax syn
     public bool IsData => Syntax.Keyword.ContextualKeywordKind == ContextualKeywordKind.Data;
 
     private ImmutableArray<FieldSymbol> _lazyFields;
-    public ImmutableArray<FieldSymbol> Fields =>
-        _lazyFields.IsDefault ? _lazyFields = CreateFields() : _lazyFields;
+    public ImmutableArray<FieldSymbol> Fields => _lazyFields.IsDefault ? _lazyFields = CreateFields() : _lazyFields;
 
     private ImmutableArray<MethodSymbol> _lazyMethods;
     public ImmutableArray<MethodSymbol> Methods =>
         _lazyMethods.IsDefault ? _lazyMethods = CreateMethods() : _lazyMethods;
 
-    private FrozenDictionary<string, Symbol>? _lazyMembers;
-    public FrozenDictionary<string, Symbol> MemberMap => _lazyMembers ??= CreateMemberMap();
+    private FrozenDictionary<string, IMemberSymbol>? _lazyMembers;
+    public FrozenDictionary<string, IMemberSymbol> MemberMap => _lazyMembers ??= CreateMemberMap();
 
     private ImmutableArray<Diagnostic> _lazyDiagnostics;
     public ImmutableArray<Diagnostic> Diagnostics =>
-        _lazyDiagnostics.IsDefault
-            ? _lazyDiagnostics = _diagnosticBag.ToImmutableArray()
-            : _lazyDiagnostics;
+        _lazyDiagnostics.IsDefault ? _lazyDiagnostics = _diagnosticBag.ToImmutableArray() : _lazyDiagnostics;
 
     ItemSyntax IItemSymbol.Syntax => Syntax;
 
     private ImmutableArray<FieldSymbol> CreateFields()
     {
-        var builder = ImmutableArray.CreateBuilder<FieldSymbol>(Syntax.Fields.Count);
+        var fields = Syntax.Members.OfType<FieldDeclarationSyntax>();
+        var builder = ImmutableArray.CreateBuilder<FieldSymbol>(fields.Count);
         var binder = Module.GetFileBinder(Syntax.SyntaxTree);
-        foreach (var syntax in Syntax.Fields)
+        foreach (var fieldSyntax in fields)
         {
-            var type = binder.BindType(syntax.Type, _diagnosticBag);
-            FieldSymbol field = new(this, syntax, type);
+            var type = binder.BindType(fieldSyntax.Type, _diagnosticBag);
+            FieldSymbol field = new(this, fieldSyntax, type);
             builder.Add(field);
         }
 
@@ -55,47 +52,26 @@ public sealed class StructSymbol(ModuleSymbol module, StructDefinitionSyntax syn
 
     private ImmutableArray<MethodSymbol> CreateMethods()
     {
-        var builder = ImmutableArray.CreateBuilder<MethodSymbol>(Syntax.Methods.Count);
+        var methods = Syntax.Members.OfType<MethodDefinitionSyntax>();
+        var builder = ImmutableArray.CreateBuilder<MethodSymbol>(methods.Count);
         var binder = Module.GetFileBinder(Syntax.SyntaxTree);
-        foreach (var syntax in Syntax.Methods)
+        foreach (var methodSyntax in methods)
         {
             var returnType =
-                syntax.ReturnType == null
+                methodSyntax.ReturnType == null
                     ? BuiltInPackage.UnitType
-                    : binder.BindType(syntax.ReturnType, _diagnosticBag);
+                    : binder.BindType(methodSyntax.ReturnType, _diagnosticBag);
 
-            MethodSymbol method = new(this, syntax, returnType);
+            MethodSymbol method = new(this, methodSyntax, returnType);
             builder.Add(method);
         }
 
         return builder.MoveToImmutable();
     }
 
-    private IEnumerable<Symbol> GetOrderedMembers()
+    private FrozenDictionary<string, IMemberSymbol> CreateMemberMap()
     {
-        var slot = 0;
-        foreach (var field in Fields)
-        {
-            if (field.Syntax.Slot == slot)
-            {
-                slot++;
-                yield return field;
-            }
-        }
-
-        foreach (var method in Methods)
-        {
-            if (method.Syntax.Slot == slot)
-            {
-                slot++;
-                yield return method;
-            }
-        }
-    }
-
-    private FrozenDictionary<string, Symbol> CreateMemberMap()
-    {
-        Dictionary<string, Symbol> map = new(Fields.Length + Methods.Length);
+        Dictionary<string, IMemberSymbol> map = new(Fields.Length + Methods.Length);
         foreach (var member in GetOrderedMembers())
         {
             if (map.TryAdd(member.Name, member))
@@ -103,20 +79,23 @@ public sealed class StructSymbol(ModuleSymbol module, StructDefinitionSyntax syn
                 continue;
             }
 
-            var identifier = member.Syntax switch
-            {
-                EnumCaseDeclarationSyntax s => s.Identifier,
-                FunctionDefinitionSyntax s => s.Identifier,
-                _ => throw new UnreachableException()
-            };
-
-            _diagnosticBag.AddError(
-                identifier,
-                DiagnosticMessages.NameIsAlreadyDefined,
-                member.Name
-            );
+            var identifier = member.Syntax.Identifier;
+            _diagnosticBag.AddError(identifier, DiagnosticMessages.NameIsAlreadyDefined, member.Name);
         }
 
         return map.ToFrozenDictionary();
+    }
+
+    private IEnumerable<IMemberSymbol> GetOrderedMembers()
+    {
+        foreach (var member in Syntax.Members)
+        {
+            yield return member.Kind switch
+            {
+                SyntaxKind.FieldDeclaration => Fields.FindBySyntax(member)!,
+                SyntaxKind.MethodDefinition => Methods.FindBySyntax(member)!,
+                _ => throw new UnreachableException()
+            };
+        }
     }
 }

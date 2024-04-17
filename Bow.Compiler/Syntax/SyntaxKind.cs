@@ -88,6 +88,7 @@ public enum SyntaxKind
     // Definition/declaration nodes
     StructDefinition,
     FieldDeclaration,
+    MethodDefinition,
     EnumDefinition,
     EnumCaseDeclaration,
     EnumCaseArgument,
@@ -104,8 +105,8 @@ public enum SyntaxKind
     ExpressionStatement,
     ReturnStatement,
     IfStatement,
-    ElseIfClause,
-    ElseClause,
+    ElseIfBlock,
+    ElseBlock,
     WhileStatement,
     AssignmentStatement,
 

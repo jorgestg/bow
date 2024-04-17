@@ -59,7 +59,7 @@ internal sealed class BoundIfStatement(
     IfStatementSyntax syntax,
     BoundExpression condition,
     BoundBlockStatement then,
-    ImmutableArray<BoundElseIfClause> elseIfs,
+    ImmutableArray<BoundElseIfBlock> elseIfs,
     BoundBlockStatement? @else
 ) : BoundStatement
 {
@@ -68,11 +68,11 @@ internal sealed class BoundIfStatement(
 
     public BoundExpression Condition { get; } = condition;
     public BoundBlockStatement Then { get; } = then;
-    public ImmutableArray<BoundElseIfClause> ElseIfs { get; } = elseIfs;
+    public ImmutableArray<BoundElseIfBlock> ElseIfs { get; } = elseIfs;
     public BoundBlockStatement? Else { get; } = @else;
 }
 
-internal readonly struct BoundElseIfClause(BoundExpression condition, BoundBlockStatement block)
+internal readonly struct BoundElseIfBlock(BoundExpression condition, BoundBlockStatement block)
 {
     public BoundExpression Condition { get; } = condition;
     public BoundBlockStatement Block { get; } = block;

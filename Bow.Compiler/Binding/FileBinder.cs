@@ -160,7 +160,7 @@ internal sealed class FileBinder : Binder
             case PackageSymbol package:
                 return package.Modules.FindByName(name);
             case ModuleSymbol module:
-                return module.MembersMap.TryGetValue(name, out var member) ? member : null;
+                return module.MembersMap.TryGetValue(name, out var member) ? (Symbol)member : null;
         }
 
         diagnostics.AddError(syntax.Parts[0], DiagnosticMessages.NameIsNotAPackage, name);
