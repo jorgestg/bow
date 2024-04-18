@@ -551,7 +551,8 @@ internal sealed class Parser(SyntaxFactory syntaxFactory)
         return _syntaxFactory.WhileStatement(whileKeyword, condition, body);
     }
 
-    // if-statement = 'if' expression block ('else' 'if' expression block)* ('else' block)?
+    // if-statement = 'if' expression block else-block?
+    // else-block = 'else' (if-statement | block)
     private IfStatementSyntax ParseIfStatement()
     {
         var ifKeyword = Match(SyntaxKind.IfKeyword);
@@ -559,34 +560,13 @@ internal sealed class Parser(SyntaxFactory syntaxFactory)
         var thenBlock = ParseBlockStatement();
         if (_current.Kind != SyntaxKind.ElseKeyword)
         {
-            return _syntaxFactory.IfStatement(
-                ifKeyword,
-                condition,
-                thenBlock,
-                new SyntaxList<ElseIfBlockSyntax>(),
-                null
-            );
+            return _syntaxFactory.IfStatement(ifKeyword, condition, thenBlock, null);
         }
 
-        SyntaxListBuilder<ElseIfBlockSyntax> elseIfBlocks = new();
-        while (_current.Kind == SyntaxKind.ElseKeyword)
-        {
-            var elseKeyword = Advance();
-            var elseIfKeyword = Match(SyntaxKind.IfKeyword);
-            var elseIfCondition = ParseExpression();
-            var elseIfBlock = ParseBlockStatement();
-            elseIfBlocks.Add(_syntaxFactory.ElseIfBlock(elseKeyword, elseIfKeyword, elseIfCondition, elseIfBlock));
-        }
-
-        ElseBlockSyntax? elseBlock = null;
-        if (_current.Kind == SyntaxKind.ElseKeyword)
-        {
-            var elseKeyword = Advance();
-            var elseBody = ParseBlockStatement();
-            elseBlock = _syntaxFactory.ElseBlock(elseKeyword, elseBody);
-        }
-
-        return _syntaxFactory.IfStatement(ifKeyword, condition, thenBlock, elseIfBlocks.ToSyntaxList(), elseBlock);
+        var elseKeyword = Advance();
+        StatementSyntax elseBody = _current.Kind == SyntaxKind.IfKeyword ? ParseIfStatement() : ParseBlockStatement();
+        var @else = _syntaxFactory.ElseBlock(elseKeyword, elseBody);
+        return _syntaxFactory.IfStatement(ifKeyword, condition, thenBlock, @else);
     }
 
     // return-statement = 'return' expression

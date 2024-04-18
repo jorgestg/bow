@@ -1,4 +1,3 @@
-using System.Diagnostics.CodeAnalysis;
 using Bow.Compiler.Syntax;
 
 namespace Bow.Compiler.Symbols;
@@ -7,29 +6,16 @@ public static class SymbolFacts
 {
     public const string DefaultModuleName = "main";
 
-    public static SymbolAccessibility GetAccessibilityFromToken(
-        Token? token,
-        SymbolAccessibility defaultVisibility
-    )
+    public static SymbolAccessibility GetAccessibilityFromToken(Token? token, SymbolAccessibility defaultVisibility)
     {
-        if (token == null)
+        return token?.Kind switch
         {
-            return defaultVisibility;
-        }
+            SyntaxKind.PubKeyword => SymbolAccessibility.Public,
+            SyntaxKind.ModKeyword => SymbolAccessibility.Module,
 
-        if (token.Kind == SyntaxKind.PubKeyword)
-        {
-            return SymbolAccessibility.Public;
-        }
+            SyntaxKind.IdentifierToken when token.ContextualKeywordKind == ContextualKeywordKind.File
+                => SymbolAccessibility.File,
 
-        if (token.Kind == SyntaxKind.ModKeyword)
-        {
-            return SymbolAccessibility.Module;
-        }
-
-        return token.ContextualKeywordKind switch
-        {
-            ContextualKeywordKind.File => SymbolAccessibility.File,
             _ => defaultVisibility
         };
     }

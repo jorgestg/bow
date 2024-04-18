@@ -222,22 +222,13 @@
         "Keyword": "Token",
         "Condition": "Expression",
         "Then": "BlockStatement",
-        "ElseIfs": { "type": "ElseIfBlock", "array": true },
         "Else": { "type": "ElseBlock", "optional": true }
-      }
-    },
-    "ElseIfBlock": {
-      "children": {
-        "ElseKeyword": "Token",
-        "IfKeyword": "Token",
-        "Condition": "Expression",
-        "Body": "BlockStatement"
       }
     },
     "ElseBlock": {
       "children": {
-        "ElseKeyword": "Token",
-        "Body": "BlockStatement"
+        "Keyword": "Token",
+        "Body": "Statement"
       }
     },
     "WhileStatement": {

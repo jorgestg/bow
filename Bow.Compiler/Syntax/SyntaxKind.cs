@@ -105,7 +105,6 @@ public enum SyntaxKind
     ExpressionStatement,
     ReturnStatement,
     IfStatement,
-    ElseIfBlock,
     ElseBlock,
     WhileStatement,
     AssignmentStatement,

@@ -37,7 +37,8 @@ statements = statement (NL statement)*
 statement = local-declaration | return-statement | if-statement | assignment-statement | expression
 local-declaration = 'let' 'mut'? ID type-reference? ('=' expression)?
 return-statement = 'return' expression
-if-statement = 'if' expression block ('else' 'if' expression block)* ('else' block)?
+if-statement = 'if' expression block else-block?
+else-block = 'else' (if-statement | block)
 while-statement = 'while' expression block
 assignment-statement = expression '=' expression
 

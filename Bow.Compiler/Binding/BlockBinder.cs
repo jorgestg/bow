@@ -124,26 +124,8 @@ internal sealed class BlockBinder(Binder parent, FunctionSymbol function) : Bind
     {
         var condition = BindExpression(syntax.Condition, diagnostics);
         var then = BindBlockStatement(syntax.Then, diagnostics);
-        ImmutableArray<BoundElseIfBlock> elseIfs;
-        if (syntax.ElseIfs.Count > 0)
-        {
-            var elseIfsBuilder = ImmutableArray.CreateBuilder<BoundElseIfBlock>(syntax.ElseIfs.Count);
-            foreach (var elseIfSyntax in syntax.ElseIfs)
-            {
-                var elseIfCondition = BindExpression(elseIfSyntax.Condition, diagnostics);
-                var elseIfThen = BindBlockStatement(elseIfSyntax.Body, diagnostics);
-                elseIfsBuilder.Add(new BoundElseIfBlock(elseIfCondition, elseIfThen));
-            }
-
-            elseIfs = elseIfsBuilder.MoveToImmutable();
-        }
-        else
-        {
-            elseIfs = [];
-        }
-
-        var @else = syntax.Else == null ? null : BindBlockStatement(syntax.Else.Body, diagnostics);
-        return new BoundIfStatement(syntax, condition, then, elseIfs, @else);
+        var @else = syntax.Else == null ? null : BindStatement(syntax.Else.Body, diagnostics);
+        return new BoundIfStatement(syntax, condition, then, @else);
     }
 
     private BoundWhileStatement BindWhileStatement(WhileStatementSyntax syntax, DiagnosticBag diagnostics)

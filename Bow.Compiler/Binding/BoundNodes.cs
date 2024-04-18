@@ -14,6 +14,11 @@ internal enum BoundNodeKind
     AssignmentStatement,
     ExpressionStatement,
 
+    // Lowering-only
+    LabelDeclarationStatement,
+    GotoStatement,
+    ConditionalGotoStatement,
+
     // Expressions
     MissingExpression,
     LiteralExpression,
@@ -46,11 +51,10 @@ internal sealed class BoundLocalDeclaration(
     public BoundExpression? Initializer { get; } = initializer;
 }
 
-internal sealed class BoundBlockStatement(BlockStatementSyntax syntax, ImmutableArray<BoundStatement> statements)
-    : BoundStatement
+internal sealed class BoundBlockStatement(SyntaxNode syntax, ImmutableArray<BoundStatement> statements) : BoundStatement
 {
     public override BoundNodeKind Kind => BoundNodeKind.BlockStatement;
-    public override BlockStatementSyntax Syntax { get; } = syntax;
+    public override SyntaxNode Syntax { get; } = syntax;
 
     public ImmutableArray<BoundStatement> Statements { get; } = statements;
 }
@@ -58,37 +62,26 @@ internal sealed class BoundBlockStatement(BlockStatementSyntax syntax, Immutable
 internal sealed class BoundIfStatement(
     IfStatementSyntax syntax,
     BoundExpression condition,
-    BoundBlockStatement then,
-    ImmutableArray<BoundElseIfBlock> elseIfs,
-    BoundBlockStatement? @else
+    BoundStatement then,
+    BoundStatement? @else
 ) : BoundStatement
 {
     public override BoundNodeKind Kind => BoundNodeKind.IfStatement;
     public override IfStatementSyntax Syntax { get; } = syntax;
 
     public BoundExpression Condition { get; } = condition;
-    public BoundBlockStatement Then { get; } = then;
-    public ImmutableArray<BoundElseIfBlock> ElseIfs { get; } = elseIfs;
-    public BoundBlockStatement? Else { get; } = @else;
+    public BoundStatement Then { get; } = then;
+    public BoundStatement? Else { get; } = @else;
 }
 
-internal readonly struct BoundElseIfBlock(BoundExpression condition, BoundBlockStatement block)
-{
-    public BoundExpression Condition { get; } = condition;
-    public BoundBlockStatement Block { get; } = block;
-}
-
-internal sealed class BoundWhileStatement(
-    WhileStatementSyntax syntax,
-    BoundExpression condition,
-    BoundBlockStatement body
-) : BoundStatement
+internal sealed class BoundWhileStatement(WhileStatementSyntax syntax, BoundExpression condition, BoundStatement body)
+    : BoundStatement
 {
     public override BoundNodeKind Kind => BoundNodeKind.WhileStatement;
     public override WhileStatementSyntax Syntax { get; } = syntax;
 
     public BoundExpression Condition { get; } = condition;
-    public BoundBlockStatement Body { get; } = body;
+    public BoundStatement Body { get; } = body;
 }
 
 internal sealed class BoundReturnStatement(ReturnStatementSyntax syntax, BoundExpression? expression) : BoundStatement
@@ -116,6 +109,37 @@ internal sealed class BoundExpressionStatement(ExpressionStatementSyntax syntax,
     public override ExpressionStatementSyntax Syntax { get; } = syntax;
 
     public BoundExpression Expression { get; } = expression;
+}
+
+internal sealed class BoundLabelDeclarationStatement(SyntaxNode syntax, LabelSymbol label) : BoundStatement
+{
+    public override BoundNodeKind Kind => BoundNodeKind.LabelDeclarationStatement;
+    public override SyntaxNode Syntax { get; } = syntax;
+
+    public LabelSymbol Label { get; } = label;
+}
+
+internal sealed class BoundGotoStatement(SyntaxNode syntax, LabelSymbol label) : BoundStatement
+{
+    public override BoundNodeKind Kind => BoundNodeKind.GotoStatement;
+    public override SyntaxNode Syntax { get; } = syntax;
+
+    public LabelSymbol Label { get; } = label;
+}
+
+internal sealed class BoundConditionalGotoStatement(
+    SyntaxNode syntax,
+    LabelSymbol label,
+    BoundExpression condition,
+    bool jumpIfFalse
+) : BoundStatement
+{
+    public override BoundNodeKind Kind => BoundNodeKind.ConditionalGotoStatement;
+    public override SyntaxNode Syntax { get; } = syntax;
+
+    public LabelSymbol Label { get; } = label;
+    public BoundExpression Condition { get; } = condition;
+    public bool JumpIfFalse { get; } = jumpIfFalse;
 }
 
 internal abstract class BoundExpression : BoundNode
