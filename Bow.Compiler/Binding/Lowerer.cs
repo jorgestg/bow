@@ -4,8 +4,6 @@ namespace Bow.Compiler.Binding;
 
 internal sealed class Lowerer : BoundTreeRewriter
 {
-    private int _nextLabelId;
-
     private Lowerer() { }
 
     public static BoundBlockStatement Lower(BoundStatement statement)
@@ -13,11 +11,6 @@ internal sealed class Lowerer : BoundTreeRewriter
         Lowerer lowerer = new();
         statement = lowerer.RewriteStatement(statement);
         return Flatten(statement);
-    }
-
-    private LabelSymbol GenerateLabel()
-    {
-        return new LabelSymbol(_nextLabelId++);
     }
 
     private static BoundBlockStatement Flatten(BoundStatement statement)
@@ -66,7 +59,7 @@ internal sealed class Lowerer : BoundTreeRewriter
             // <then block>
             // @end:
             // ...
-            var endLabel = GenerateLabel();
+            var endLabel = BoundLabelFactory.GenerateLabel();
             BoundConditionalGotoStatement gotoEnd = new(node.Syntax, endLabel, node.Condition, jumpIfFalse: true);
             BoundLabelDeclarationStatement endLabelDeclaration = new(node.Syntax, endLabel);
             BoundBlockStatement block = new(node.Syntax.Then, [gotoEnd, node.Then, endLabelDeclaration]);
@@ -81,8 +74,8 @@ internal sealed class Lowerer : BoundTreeRewriter
             // <else block>
             // @end:
             // ...
-            var elseLabel = GenerateLabel();
-            var endLabel = GenerateLabel();
+            var elseLabel = BoundLabelFactory.GenerateLabel();
+            var endLabel = BoundLabelFactory.GenerateLabel();
             BoundConditionalGotoStatement gotoElse = new(node.Syntax, elseLabel, node.Condition, jumpIfFalse: true);
             BoundGotoStatement gotoEnd = new(node.Syntax, endLabel);
             BoundLabelDeclarationStatement elseLabelDeclaration = new(node.Syntax, elseLabel);
@@ -105,14 +98,12 @@ internal sealed class Lowerer : BoundTreeRewriter
         // @continue:
         // jeq <condition>, 1, @body
         // @break:
-        var continueLabel = GenerateLabel();
-        var bodyLabel = GenerateLabel();
-        var breakLabel = GenerateLabel();
-        BoundGotoStatement gotoContinue = new(node.Syntax, continueLabel);
+        var bodyLabel = BoundLabelFactory.GenerateLabel();
+        BoundGotoStatement gotoContinue = new(node.Syntax, node.ContinueLabel);
         BoundLabelDeclarationStatement bodyLabelDeclaration = new(node.Syntax, bodyLabel);
-        BoundLabelDeclarationStatement checkLabelDeclaration = new(node.Syntax, continueLabel);
+        BoundLabelDeclarationStatement checkLabelDeclaration = new(node.Syntax, node.ContinueLabel);
         BoundConditionalGotoStatement gotoBody = new(node.Syntax, bodyLabel, node.Condition, jumpIfFalse: false);
-        BoundLabelDeclarationStatement breakLabelDeclaration = new(node.Syntax, breakLabel);
+        BoundLabelDeclarationStatement breakLabelDeclaration = new(node.Syntax, node.BreakLabel);
         BoundBlockStatement block =
             new(
                 node.Syntax,

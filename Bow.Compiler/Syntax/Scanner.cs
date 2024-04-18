@@ -143,6 +143,8 @@ internal sealed class Scanner(SyntaxFactory syntaxFactory)
         return span switch
         {
             "and" => CreateToken(SyntaxKind.AndKeyword),
+            "break" => CreateToken(SyntaxKind.BreakKeyword),
+            "continue" => CreateToken(SyntaxKind.ContinueKeyword),
             "else" => CreateToken(SyntaxKind.ElseKeyword),
             "enum" => CreateToken(SyntaxKind.EnumKeyword),
             "false" => CreateToken(SyntaxKind.FalseKeyword),

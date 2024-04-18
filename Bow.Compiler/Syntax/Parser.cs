@@ -503,6 +503,8 @@ internal sealed class Parser(SyntaxFactory syntaxFactory)
             SyntaxKind.LetKeyword => ParseLocalDeclaration(),
             SyntaxKind.IfKeyword => ParseIfStatement(),
             SyntaxKind.WhileKeyword => ParseWhileStatement(),
+            SyntaxKind.BreakKeyword => ParseBreakStatement(),
+            SyntaxKind.ContinueKeyword => ParseContinueStatement(),
             SyntaxKind.ReturnKeyword => ParseReturnStatement(),
             _ => ParseAssignmentOrExpressionStatement(),
         };
@@ -526,31 +528,6 @@ internal sealed class Parser(SyntaxFactory syntaxFactory)
         return _syntaxFactory.LocalDeclaration(letKeyword, mutableKeyword, identifier, type, initializer);
     }
 
-    // assignment-statement = expression '=' expression
-    // expression-statement = expression
-    private StatementSyntax ParseAssignmentOrExpressionStatement()
-    {
-        var expression = ParseExpression();
-        if (_current.Kind == SyntaxKind.EqualsToken)
-        {
-            var assignee = expression;
-            var operatorToken = Advance();
-            var right = ParseExpression();
-            return _syntaxFactory.AssignmentStatement(assignee, operatorToken, right);
-        }
-
-        return _syntaxFactory.ExpressionStatement(expression);
-    }
-
-    // while-statement = 'while' expression block
-    private WhileStatementSyntax ParseWhileStatement()
-    {
-        var whileKeyword = Match(SyntaxKind.WhileKeyword);
-        var condition = ParseExpression();
-        var body = ParseBlockStatement();
-        return _syntaxFactory.WhileStatement(whileKeyword, condition, body);
-    }
-
     // if-statement = 'if' expression block else-block?
     // else-block = 'else' (if-statement | block)
     private IfStatementSyntax ParseIfStatement()
@@ -567,6 +544,43 @@ internal sealed class Parser(SyntaxFactory syntaxFactory)
         StatementSyntax elseBody = _current.Kind == SyntaxKind.IfKeyword ? ParseIfStatement() : ParseBlockStatement();
         var @else = _syntaxFactory.ElseBlock(elseKeyword, elseBody);
         return _syntaxFactory.IfStatement(ifKeyword, condition, thenBlock, @else);
+    }
+
+    // while-statement = 'while' expression block
+    private WhileStatementSyntax ParseWhileStatement()
+    {
+        var whileKeyword = Match(SyntaxKind.WhileKeyword);
+        var condition = ParseExpression();
+        var body = ParseBlockStatement();
+        return _syntaxFactory.WhileStatement(whileKeyword, condition, body);
+    }
+
+    // break-statement = break
+    private BreakStatementSyntax ParseBreakStatement()
+    {
+        return _syntaxFactory.BreakStatement(Advance());
+    }
+
+    // continue-statement = continue
+    private ContinueStatementSyntax ParseContinueStatement()
+    {
+        return _syntaxFactory.ContinueStatement(Advance());
+    }
+
+    // assignment-statement = expression '=' expression
+    // expression-statement = expression
+    private StatementSyntax ParseAssignmentOrExpressionStatement()
+    {
+        var expression = ParseExpression();
+        if (_current.Kind == SyntaxKind.EqualsToken)
+        {
+            var assignee = expression;
+            var operatorToken = Advance();
+            var right = ParseExpression();
+            return _syntaxFactory.AssignmentStatement(assignee, operatorToken, right);
+        }
+
+        return _syntaxFactory.ExpressionStatement(expression);
     }
 
     // return-statement = 'return' expression

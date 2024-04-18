@@ -8,6 +8,8 @@ public static class SyntaxFacts
         {
             SyntaxKind.NewLineToken => "new line",
             SyntaxKind.IdentifierToken => "identifier",
+            SyntaxKind.BreakKeyword => "break",
+            SyntaxKind.ContinueKeyword => "continue",
             SyntaxKind.ModKeyword => "mod",
             SyntaxKind.NotKeyword => "not",
             SyntaxKind.CommaToken => ",",

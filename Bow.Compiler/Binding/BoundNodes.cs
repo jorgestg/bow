@@ -10,6 +10,8 @@ internal enum BoundNodeKind
     BlockStatement,
     IfStatement,
     WhileStatement,
+    BreakStatement,
+    ContinueStatement,
     ReturnStatement,
     AssignmentStatement,
     ExpressionStatement,
@@ -74,14 +76,35 @@ internal sealed class BoundIfStatement(
     public BoundStatement? Else { get; } = @else;
 }
 
-internal sealed class BoundWhileStatement(WhileStatementSyntax syntax, BoundExpression condition, BoundStatement body)
-    : BoundStatement
+internal sealed class BoundWhileStatement(
+    WhileStatementSyntax syntax,
+    BoundExpression condition,
+    BoundStatement body,
+    BoundLabel breakLabel,
+    BoundLabel continueLabel
+) : BoundStatement
 {
     public override BoundNodeKind Kind => BoundNodeKind.WhileStatement;
     public override WhileStatementSyntax Syntax { get; } = syntax;
 
     public BoundExpression Condition { get; } = condition;
     public BoundStatement Body { get; } = body;
+    public BoundLabel BreakLabel { get; } = breakLabel;
+    public BoundLabel ContinueLabel { get; } = continueLabel;
+}
+
+internal sealed class BoundBreakStatement(BreakStatementSyntax syntax, BoundLabel label) : BoundStatement
+{
+    public override BoundNodeKind Kind => BoundNodeKind.BreakStatement;
+    public override BreakStatementSyntax Syntax { get; } = syntax;
+    public BoundLabel Label { get; } = label;
+}
+
+internal sealed class BoundContinueStatement(ContinueStatementSyntax syntax, BoundLabel label) : BoundStatement
+{
+    public override BoundNodeKind Kind => BoundNodeKind.ContinueStatement;
+    public override ContinueStatementSyntax Syntax { get; } = syntax;
+    public BoundLabel Label { get; } = label;
 }
 
 internal sealed class BoundReturnStatement(ReturnStatementSyntax syntax, BoundExpression? expression) : BoundStatement
@@ -111,25 +134,25 @@ internal sealed class BoundExpressionStatement(ExpressionStatementSyntax syntax,
     public BoundExpression Expression { get; } = expression;
 }
 
-internal sealed class BoundLabelDeclarationStatement(SyntaxNode syntax, LabelSymbol label) : BoundStatement
+internal sealed class BoundLabelDeclarationStatement(SyntaxNode syntax, BoundLabel label) : BoundStatement
 {
     public override BoundNodeKind Kind => BoundNodeKind.LabelDeclarationStatement;
     public override SyntaxNode Syntax { get; } = syntax;
 
-    public LabelSymbol Label { get; } = label;
+    public BoundLabel Label { get; } = label;
 }
 
-internal sealed class BoundGotoStatement(SyntaxNode syntax, LabelSymbol label) : BoundStatement
+internal sealed class BoundGotoStatement(SyntaxNode syntax, BoundLabel label) : BoundStatement
 {
     public override BoundNodeKind Kind => BoundNodeKind.GotoStatement;
     public override SyntaxNode Syntax { get; } = syntax;
 
-    public LabelSymbol Label { get; } = label;
+    public BoundLabel Label { get; } = label;
 }
 
 internal sealed class BoundConditionalGotoStatement(
     SyntaxNode syntax,
-    LabelSymbol label,
+    BoundLabel label,
     BoundExpression condition,
     bool jumpIfFalse
 ) : BoundStatement
@@ -137,7 +160,7 @@ internal sealed class BoundConditionalGotoStatement(
     public override BoundNodeKind Kind => BoundNodeKind.ConditionalGotoStatement;
     public override SyntaxNode Syntax { get; } = syntax;
 
-    public LabelSymbol Label { get; } = label;
+    public BoundLabel Label { get; } = label;
     public BoundExpression Condition { get; } = condition;
     public bool JumpIfFalse { get; } = jumpIfFalse;
 }

@@ -9,6 +9,8 @@ public enum SyntaxKind
 
     // Keyword tokens
     AndKeyword,
+    ContinueKeyword,
+    BreakKeyword,
     ElseKeyword,
     EnumKeyword,
     FalseKeyword,
@@ -102,12 +104,14 @@ public enum SyntaxKind
     // Statement nodes
     LocalDeclaration,
     BlockStatement,
-    ExpressionStatement,
-    ReturnStatement,
     IfStatement,
     ElseBlock,
     WhileStatement,
+    BreakStatement,
+    ContinueStatement,
+    ReturnStatement,
     AssignmentStatement,
+    ExpressionStatement,
 
     // Expression nodes
     MissingExpression,

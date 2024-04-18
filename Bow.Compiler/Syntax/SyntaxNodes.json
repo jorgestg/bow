@@ -209,6 +209,18 @@
         "Expression": "Expression"
       }
     },
+    "BreakStatement": {
+      "extends": "Statement",
+      "children": {
+        "Keyword": "Token"
+      }
+    },
+    "ContinueStatement": {
+      "extends": "Statement",
+      "children": {
+        "Keyword": "Token"
+      }
+    },
     "ReturnStatement": {
       "extends": "Statement",
       "children": {

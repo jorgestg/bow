@@ -32,4 +32,5 @@ internal static class DiagnosticMessages
     public const string VariableIsImmutable = "'{0}' is immutable.";
     public const string CouldNotInferStructType = "Could not infer struct type.";
     public const string NameIsNotAMemberOfType = "'{0}' is not a member of '{1}'.";
+    public const string BreakOrContinueOutsideOfLoop = "'{0}' can only be used inside of loops.";
 }

@@ -35,6 +35,8 @@ internal sealed class BlockBinder(Binder parent, FunctionSymbol function) : Bind
     private readonly FunctionSymbol _function = function;
 
     private AmbientTypeStack _ambientTypeStack = new(function.ReturnType);
+    private BoundLabel _breakLabel;
+    private BoundLabel _continueLabel;
 
     private Dictionary<string, LocalSymbol>? _lazyLocals;
     private Dictionary<string, LocalSymbol> Locals => _lazyLocals ??= [];
@@ -57,6 +59,8 @@ internal sealed class BlockBinder(Binder parent, FunctionSymbol function) : Bind
             SyntaxKind.BlockStatement => BindBlockStatement((BlockStatementSyntax)syntax, diagnostics),
             SyntaxKind.IfStatement => BindIfStatement((IfStatementSyntax)syntax, diagnostics),
             SyntaxKind.WhileStatement => BindWhileStatement((WhileStatementSyntax)syntax, diagnostics),
+            SyntaxKind.BreakStatement => BindBreakStatement((BreakStatementSyntax)syntax, diagnostics),
+            SyntaxKind.ContinueStatement => BindContinueStatement((ContinueStatementSyntax)syntax, diagnostics),
             SyntaxKind.ReturnStatement => BindReturnStatement((ReturnStatementSyntax)syntax, diagnostics),
             SyntaxKind.AssignmentStatement => BindAssignmentStatement((AssignmentStatementSyntax)syntax, diagnostics),
             SyntaxKind.ExpressionStatement => BindExpressionStatement((ExpressionStatementSyntax)syntax, diagnostics),
@@ -131,8 +135,49 @@ internal sealed class BlockBinder(Binder parent, FunctionSymbol function) : Bind
     private BoundWhileStatement BindWhileStatement(WhileStatementSyntax syntax, DiagnosticBag diagnostics)
     {
         var condition = BindExpression(syntax.Condition, diagnostics);
+
+        var previousBreakLabel = _breakLabel;
+        var breakLabel = BoundLabelFactory.GenerateLabel();
+        _breakLabel = breakLabel;
+
+        var previousContinueLabel = _continueLabel;
+        var continueLabel = BoundLabelFactory.GenerateLabel();
+        _continueLabel = continueLabel;
+
         var body = BindBlockStatement(syntax.Body, diagnostics);
-        return new BoundWhileStatement(syntax, condition, body);
+
+        _breakLabel = previousBreakLabel;
+        _continueLabel = previousContinueLabel;
+
+        return new BoundWhileStatement(syntax, condition, body, breakLabel, continueLabel);
+    }
+
+    private BoundBreakStatement BindBreakStatement(BreakStatementSyntax syntax, DiagnosticBag diagnostics)
+    {
+        if (_breakLabel.IsDefault)
+        {
+            diagnostics.AddError(
+                syntax,
+                DiagnosticMessages.BreakOrContinueOutsideOfLoop,
+                SyntaxFacts.GetKindDisplayText(syntax.Keyword.Kind)
+            );
+        }
+
+        return new BoundBreakStatement(syntax, _breakLabel);
+    }
+
+    private BoundContinueStatement BindContinueStatement(ContinueStatementSyntax syntax, DiagnosticBag diagnostics)
+    {
+        if (_continueLabel.IsDefault)
+        {
+            diagnostics.AddError(
+                syntax,
+                DiagnosticMessages.BreakOrContinueOutsideOfLoop,
+                SyntaxFacts.GetKindDisplayText(syntax.Keyword.Kind)
+            );
+        }
+
+        return new BoundContinueStatement(syntax, _continueLabel);
     }
 
     private BoundReturnStatement BindReturnStatement(ReturnStatementSyntax syntax, DiagnosticBag diagnostics)
