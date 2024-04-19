@@ -5,38 +5,22 @@ using Bow.Compiler.Syntax;
 
 namespace Bow.Compiler.Binding;
 
-internal sealed class BlockBinder(Binder parent, FunctionSymbol function) : Binder(parent)
+internal sealed class BlockBinder : Binder
 {
-    /// <summary>
-    /// Stack to keep track of the type we expect for the current context.
-    /// </summary>
-    private struct AmbientTypeStack(TypeSymbol functionReturnType)
-    {
-        private readonly TypeSymbol _functionReturnType = functionReturnType;
-        private Stack<TypeSymbol>? _lazyAmbientTypeStack;
+    private readonly FunctionSymbol _function;
 
-        public readonly TypeSymbol Peek()
-        {
-            return _lazyAmbientTypeStack?.Peek() ?? _functionReturnType;
-        }
+    private readonly Stack<TypeSymbol> _ambientTypeStack = new();
 
-        public void Push(TypeSymbol type)
-        {
-            _lazyAmbientTypeStack ??= new Stack<TypeSymbol>();
-            _lazyAmbientTypeStack.Push(type);
-        }
-
-        public readonly void Pop()
-        {
-            _lazyAmbientTypeStack?.Pop();
-        }
-    }
-
-    private readonly FunctionSymbol _function = function;
-
-    private AmbientTypeStack _ambientTypeStack = new(function.ReturnType);
+    private BoundLabelGenerator _labelGenerator = new();
     private BoundLabel _breakLabel;
     private BoundLabel _continueLabel;
+
+    public BlockBinder(Binder parent, FunctionSymbol function)
+        : base(parent)
+    {
+        _function = function;
+        _ambientTypeStack.Push(PlaceholderTypeSymbol.UnknownType);
+    }
 
     private Dictionary<string, LocalSymbol>? _lazyLocals;
     private Dictionary<string, LocalSymbol> Locals => _lazyLocals ??= [];
@@ -137,11 +121,11 @@ internal sealed class BlockBinder(Binder parent, FunctionSymbol function) : Bind
         var condition = BindExpression(syntax.Condition, diagnostics);
 
         var previousBreakLabel = _breakLabel;
-        var breakLabel = BoundLabelFactory.GenerateLabel();
+        var breakLabel = _labelGenerator.GenerateLabel();
         _breakLabel = breakLabel;
 
         var previousContinueLabel = _continueLabel;
-        var continueLabel = BoundLabelFactory.GenerateLabel();
+        var continueLabel = _labelGenerator.GenerateLabel();
         _continueLabel = continueLabel;
 
         var body = BindBlockStatement(syntax.Body, diagnostics);

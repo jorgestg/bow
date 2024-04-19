@@ -4,6 +4,8 @@ namespace Bow.Compiler.Binding;
 
 internal sealed class Lowerer : BoundTreeRewriter
 {
+    private BoundLabelGenerator _labelGenerator = new();
+
     private Lowerer() { }
 
     public static BoundBlockStatement Lower(BoundStatement statement)
@@ -59,7 +61,7 @@ internal sealed class Lowerer : BoundTreeRewriter
             // <then block>
             // @end:
             // ...
-            var endLabel = BoundLabelFactory.GenerateLabel();
+            var endLabel = _labelGenerator.GenerateLabel();
             BoundConditionalGotoStatement gotoEnd = new(node.Syntax, endLabel, node.Condition, jumpIfFalse: true);
             BoundLabelDeclarationStatement endLabelDeclaration = new(node.Syntax, endLabel);
             BoundBlockStatement block = new(node.Syntax.Then, [gotoEnd, node.Then, endLabelDeclaration]);
@@ -74,8 +76,8 @@ internal sealed class Lowerer : BoundTreeRewriter
             // <else block>
             // @end:
             // ...
-            var elseLabel = BoundLabelFactory.GenerateLabel();
-            var endLabel = BoundLabelFactory.GenerateLabel();
+            var elseLabel = _labelGenerator.GenerateLabel();
+            var endLabel = _labelGenerator.GenerateLabel();
             BoundConditionalGotoStatement gotoElse = new(node.Syntax, elseLabel, node.Condition, jumpIfFalse: true);
             BoundGotoStatement gotoEnd = new(node.Syntax, endLabel);
             BoundLabelDeclarationStatement elseLabelDeclaration = new(node.Syntax, elseLabel);
@@ -98,7 +100,7 @@ internal sealed class Lowerer : BoundTreeRewriter
         // @continue:
         // jeq <condition>, 1, @body
         // @break:
-        var bodyLabel = BoundLabelFactory.GenerateLabel();
+        var bodyLabel = _labelGenerator.GenerateLabel();
         BoundGotoStatement gotoContinue = new(node.Syntax, node.ContinueLabel);
         BoundLabelDeclarationStatement bodyLabelDeclaration = new(node.Syntax, bodyLabel);
         BoundLabelDeclarationStatement checkLabelDeclaration = new(node.Syntax, node.ContinueLabel);

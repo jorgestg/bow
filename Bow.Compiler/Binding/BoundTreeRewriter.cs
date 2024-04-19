@@ -97,7 +97,7 @@ internal abstract class BoundTreeRewriter
             return node;
         }
 
-        return new BoundWhileStatement(node.Syntax, condition, body);
+        return new BoundWhileStatement(node.Syntax, condition, body, node.BreakLabel, node.ContinueLabel);
     }
 
     protected virtual BoundStatement RewriteReturnStatement(BoundReturnStatement node)

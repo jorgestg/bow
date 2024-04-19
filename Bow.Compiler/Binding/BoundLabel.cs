@@ -5,20 +5,11 @@ internal record struct BoundLabel(int Id)
     public readonly bool IsDefault => Id == 0;
 }
 
-internal sealed class BoundLabelFactory
+internal struct BoundLabelGenerator()
 {
-    private static readonly BoundLabelFactory Instance = new();
-
-    public static BoundLabel GenerateLabel()
-    {
-        return Instance.GenerateLabelInternal();
-    }
-
     private int _nextLabelId = 1;
 
-    private BoundLabelFactory() { }
-
-    private BoundLabel GenerateLabelInternal()
+    public BoundLabel GenerateLabel()
     {
         return new BoundLabel(_nextLabelId++);
     }
