@@ -11,7 +11,7 @@ public sealed class ModuleSymbol(PackageSymbol package, string name, ImmutableAr
     private readonly DiagnosticBag _diagnosticBag = new();
 
     public override string Name { get; } = name;
-    public override CompilationUnitSyntax Syntax => throw new InvalidOperationException();
+    public override SyntaxNode Syntax => throw new InvalidOperationException();
     public override ModuleSymbol Module => this;
 
     private ModuleBinder? _lazyBinder;
@@ -126,17 +126,20 @@ public sealed class ModuleSymbol(PackageSymbol package, string name, ImmutableAr
 
     private IEnumerable<IItemSymbol> GetOrderedItems()
     {
-        foreach (var itemSyntax in Syntax.Items)
+        foreach (var root in Roots)
         {
-            yield return itemSyntax.Kind switch
+            foreach (var itemSyntax in root.Items)
             {
-                SyntaxKind.EnumDefinition
-                or SyntaxKind.StructDefinition
-                    => (IItemSymbol)Types.FindBySyntax(itemSyntax)!,
+                yield return itemSyntax.Kind switch
+                {
+                    SyntaxKind.EnumDefinition
+                    or SyntaxKind.StructDefinition
+                        => (IItemSymbol)Types.FindBySyntax(itemSyntax)!,
 
-                SyntaxKind.FunctionDefinition => Functions.FindBySyntax(itemSyntax)!,
-                _ => throw new UnreachableException()
-            };
+                    SyntaxKind.FunctionDefinition => Functions.FindBySyntax(itemSyntax)!,
+                    _ => throw new UnreachableException()
+                };
+            }
         }
     }
 }

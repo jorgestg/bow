@@ -11,42 +11,47 @@ public class BoundOperatorTests
         [
             // -s32 => s32
             SyntaxKind.MinusToken,
-            BoundOperatorKind.Negation,
             BuiltInPackage.Signed32Type,
+            true,
+            BoundOperatorKind.Negation,
             BuiltInPackage.Signed32Type,
             BuiltInPackage.Signed32Type
         ],
         [
             // -f32 => f32
             SyntaxKind.MinusToken,
-            BoundOperatorKind.Negation,
             BuiltInPackage.Float32Type,
+            true,
+            BoundOperatorKind.Negation,
             BuiltInPackage.Float32Type,
             BuiltInPackage.Float32Type
         ],
         [
             // -unit => ???
             SyntaxKind.MinusToken,
-            BoundOperatorKind.Negation,
             BuiltInPackage.UnitType,
-            PlaceholderTypeSymbol.UnknownType,
-            PlaceholderTypeSymbol.UnknownType,
+            false,
+            BoundOperatorKind.Negation,
+            PlaceholderTypeSymbol.Instance,
+            PlaceholderTypeSymbol.Instance
         ],
         [
             // not bool => bool
             SyntaxKind.NotKeyword,
-            BoundOperatorKind.LogicalNegation,
             BuiltInPackage.BoolType,
+            true,
+            BoundOperatorKind.LogicalNegation,
             BuiltInPackage.BoolType,
             BuiltInPackage.BoolType
         ],
         [
             // not s32 => ???
             SyntaxKind.NotKeyword,
-            BoundOperatorKind.LogicalNegation,
             BuiltInPackage.Signed32Type,
-            PlaceholderTypeSymbol.UnknownType,
-            PlaceholderTypeSymbol.UnknownType,
+            false,
+            BoundOperatorKind.LogicalNegation,
+            PlaceholderTypeSymbol.Instance,
+            PlaceholderTypeSymbol.Instance
         ],
     ];
 
@@ -54,17 +59,22 @@ public class BoundOperatorTests
     [MemberData(nameof(UnaryOperatorTestCases))]
     internal void UnaryOperatorFor_ReturnsCorrectTypes(
         SyntaxKind syntaxKind,
-        BoundOperatorKind expectedOperatorKind,
         TypeSymbol operandType,
+        bool expectedResult,
+        BoundOperatorKind expectedOperatorKind,
         TypeSymbol expectedOperandType,
         TypeSymbol expectedResultType
     )
     {
-        var @operator = BoundOperator.UnaryOperatorFor(syntaxKind, operandType);
+        var result = BoundOperator.TryBindUnaryOperator(syntaxKind, operandType, out var @operator);
 
-        Assert.Equal(expectedOperatorKind, @operator.Kind);
-        Assert.Equal(expectedOperandType, @operator.OperandType);
-        Assert.Equal(expectedResultType, @operator.ResultType);
+        Assert.Equal(expectedResult, result);
+        if (result)
+        {
+            Assert.Equal(expectedOperatorKind, @operator.Kind);
+            Assert.Equal(expectedOperandType, @operator.OperandType);
+            Assert.Equal(expectedResultType, @operator.ResultType);
+        }
     }
 
     public static readonly object[][] BinaryOperatorTestCases =
@@ -72,83 +82,95 @@ public class BoundOperatorTests
         [
             // s16 * s32 => s32
             SyntaxKind.StarToken,
-            BoundOperatorKind.Multiplication,
             BuiltInPackage.Signed16Type,
             BuiltInPackage.Signed32Type,
+            true,
+            BoundOperatorKind.Multiplication,
             BuiltInPackage.Signed32Type,
             BuiltInPackage.Signed32Type
         ],
         [
             // s32 > s32 => bool
             SyntaxKind.GreaterThanToken,
+            BuiltInPackage.Signed32Type,
+            BuiltInPackage.Signed32Type,
+            true,
             BoundOperatorKind.Greater,
-            BuiltInPackage.Signed32Type,
-            BuiltInPackage.Signed32Type,
             BuiltInPackage.Signed32Type,
             BuiltInPackage.BoolType
         ],
         [
             // unit == never => ???
             SyntaxKind.EqualEqualToken,
-            BoundOperatorKind.Equals,
             BuiltInPackage.UnitType,
             BuiltInPackage.NeverType,
-            PlaceholderTypeSymbol.UnknownType,
-            PlaceholderTypeSymbol.UnknownType
+            false,
+            BoundOperatorKind.Equals,
+            PlaceholderTypeSymbol.Instance,
+            PlaceholderTypeSymbol.Instance
         ],
         [
             // s32 & s16 => s32
             SyntaxKind.AmpersandToken,
-            BoundOperatorKind.BitwiseAnd,
             BuiltInPackage.Signed32Type,
             BuiltInPackage.Signed16Type,
+            true,
+            BoundOperatorKind.BitwiseAnd,
             BuiltInPackage.Signed32Type,
             BuiltInPackage.Signed32Type,
         ],
         [
             // u32 & s32 => ???
             SyntaxKind.AmpersandToken,
-            BoundOperatorKind.BitwiseAnd,
             BuiltInPackage.Unsigned32Type,
             BuiltInPackage.Signed32Type,
-            PlaceholderTypeSymbol.UnknownType,
-            PlaceholderTypeSymbol.UnknownType
+            false,
+            BoundOperatorKind.BitwiseAnd,
+            PlaceholderTypeSymbol.Instance,
+            PlaceholderTypeSymbol.Instance
         ],
         [
             // bool and bool => bool
             SyntaxKind.AndKeyword,
+            BuiltInPackage.BoolType,
+            BuiltInPackage.BoolType,
+            true,
             BoundOperatorKind.LogicalAnd,
-            BuiltInPackage.BoolType,
-            BuiltInPackage.BoolType,
             BuiltInPackage.BoolType,
             BuiltInPackage.BoolType
         ],
         [
             // bool and unit => ???
             SyntaxKind.AndKeyword,
-            BoundOperatorKind.LogicalAnd,
             BuiltInPackage.BoolType,
             BuiltInPackage.UnitType,
-            PlaceholderTypeSymbol.UnknownType,
-            PlaceholderTypeSymbol.UnknownType
+            false,
+            BoundOperatorKind.LogicalAnd,
+            PlaceholderTypeSymbol.Instance,
+            PlaceholderTypeSymbol.Instance
         ],
     ];
 
     [Theory]
     [MemberData(nameof(BinaryOperatorTestCases))]
-    internal void BinaryOperatorFor_ReturnsCorrectTypes(
+    internal void TryBindBinaryOperator_ReturnsCorrectTypes(
         SyntaxKind syntaxKind,
-        BoundOperatorKind expectedOperatorKind,
         TypeSymbol leftType,
         TypeSymbol rightType,
+        bool expectedResult,
+        BoundOperatorKind expectedOperatorKind,
         TypeSymbol expectedOperandType,
         TypeSymbol expectedResultType
     )
     {
-        var @operator = BoundOperator.BinaryOperatorFor(syntaxKind, leftType, rightType);
+        var result = BoundOperator.TryBindBinaryOperator(syntaxKind, leftType, rightType, out var @operator);
 
-        Assert.Equal(expectedOperatorKind, @operator.Kind);
-        Assert.Equal(expectedOperandType, @operator.OperandType);
-        Assert.Equal(expectedResultType, @operator.ResultType);
+        Assert.Equal(expectedResult, result);
+        if (result)
+        {
+            Assert.Equal(expectedOperatorKind, @operator.Kind);
+            Assert.Equal(expectedOperandType, @operator.OperandType);
+            Assert.Equal(expectedResultType, @operator.ResultType);
+        }
     }
 }

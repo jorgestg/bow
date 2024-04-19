@@ -40,34 +40,79 @@ internal readonly struct BoundOperator
     public TypeSymbol OperandType { get; }
     public TypeSymbol ResultType { get; }
 
-    public static BoundOperator UnaryOperatorFor(SyntaxKind operatorSyntaxKind, TypeSymbol operandType)
+    public static BoundOperator CreateErrorUnaryOperator(SyntaxKind operatorSyntaxKind)
     {
-        BoundOperatorKind kind;
-        TypeSymbol resultType;
-        if (operatorSyntaxKind == SyntaxKind.NotKeyword)
+        var operatorKind = operatorSyntaxKind switch
         {
-            kind = BoundOperatorKind.LogicalNegation;
-            resultType =
-                operandType == BuiltInPackage.BoolType ? BuiltInPackage.BoolType : PlaceholderTypeSymbol.UnknownType;
-        }
-        else
-        {
-            Debug.Assert(operatorSyntaxKind == SyntaxKind.MinusToken);
+            SyntaxKind.NotKeyword => BoundOperatorKind.LogicalNegation,
+            SyntaxKind.MinusToken => BoundOperatorKind.Negation,
+            _ => throw new UnreachableException()
+        };
 
-            kind = BoundOperatorKind.Negation;
-            resultType =
-                operandType.IsNumericType() && !((PrimitiveTypeSymbol)operandType).IsUnsigned()
-                    ? operandType
-                    : PlaceholderTypeSymbol.UnknownType;
-        }
-
-        return new BoundOperator(kind, operandType: resultType, resultType);
+        return new BoundOperator(operatorKind, PlaceholderTypeSymbol.Instance, PlaceholderTypeSymbol.Instance);
     }
 
-    public static BoundOperator BinaryOperatorFor(
+    public static BoundOperator CreateErrorBinaryOperator(SyntaxKind operatorSyntaxKind)
+    {
+        var operatorKind = operatorSyntaxKind switch
+        {
+            SyntaxKind.StarToken => BoundOperatorKind.Multiplication,
+            SyntaxKind.SlashToken => BoundOperatorKind.Division,
+            SyntaxKind.PercentToken => BoundOperatorKind.Modulo,
+            SyntaxKind.PlusToken => BoundOperatorKind.Addition,
+            SyntaxKind.MinusToken => BoundOperatorKind.Subtraction,
+            SyntaxKind.GreaterThanToken => BoundOperatorKind.Greater,
+            SyntaxKind.GreaterThanEqualToken => BoundOperatorKind.GreaterOrEqual,
+            SyntaxKind.LessThanToken => BoundOperatorKind.Less,
+            SyntaxKind.LessThanEqualToken => BoundOperatorKind.LessOrEqual,
+            SyntaxKind.EqualEqualToken => BoundOperatorKind.Equals,
+            SyntaxKind.DiamondToken => BoundOperatorKind.NotEquals,
+            SyntaxKind.AmpersandToken => BoundOperatorKind.BitwiseAnd,
+            SyntaxKind.PipeToken => BoundOperatorKind.BitwiseOr,
+            SyntaxKind.AndKeyword => BoundOperatorKind.LogicalAnd,
+            SyntaxKind.OrKeyword => BoundOperatorKind.LogicalOr,
+            _ => throw new UnreachableException()
+        };
+
+        return new BoundOperator(operatorKind, PlaceholderTypeSymbol.Instance, PlaceholderTypeSymbol.Instance);
+    }
+
+    public static bool TryBindUnaryOperator(
+        SyntaxKind operatorSyntaxKind,
+        TypeSymbol operandType,
+        out BoundOperator @operator
+    )
+    {
+        if (operatorSyntaxKind == SyntaxKind.NotKeyword && operandType == BuiltInPackage.BoolType)
+        {
+            @operator = new BoundOperator(
+                BoundOperatorKind.LogicalNegation,
+                operandType: BuiltInPackage.BoolType,
+                resultType: BuiltInPackage.BoolType
+            );
+
+            return true;
+        }
+
+        if (
+            operatorSyntaxKind == SyntaxKind.MinusToken
+            && operandType.IsNumericType()
+            && !((PrimitiveTypeSymbol)operandType).IsUnsigned()
+        )
+        {
+            @operator = new BoundOperator(BoundOperatorKind.Negation, operandType, resultType: operandType);
+            return true;
+        }
+
+        @operator = default;
+        return false;
+    }
+
+    public static bool TryBindBinaryOperator(
         SyntaxKind operatorSyntaxKind,
         TypeSymbol leftType,
-        TypeSymbol rightType
+        TypeSymbol rightType,
+        out BoundOperator @operator
     )
     {
         var operatorKind = operatorSyntaxKind switch
@@ -90,8 +135,6 @@ internal readonly struct BoundOperator
             _ => throw new UnreachableException()
         };
 
-        TypeSymbol operandType = PlaceholderTypeSymbol.UnknownType;
-        TypeSymbol resultType = PlaceholderTypeSymbol.UnknownType;
         switch (operatorKind)
         {
             case BoundOperatorKind.Multiplication:
@@ -100,13 +143,13 @@ internal readonly struct BoundOperator
             case BoundOperatorKind.Addition:
             case BoundOperatorKind.Subtraction:
             {
-                if (leftType.TryUnify(rightType, out var unifiedType) && unifiedType.IsNumericType())
+                if (!leftType.TryUnify(rightType, out var unifiedType) || !unifiedType.IsNumericType())
                 {
-                    operandType = unifiedType;
-                    resultType = unifiedType;
+                    break;
                 }
 
-                break;
+                @operator = new BoundOperator(operatorKind, unifiedType, unifiedType);
+                return true;
             }
 
             case BoundOperatorKind.Greater:
@@ -114,25 +157,25 @@ internal readonly struct BoundOperator
             case BoundOperatorKind.Less:
             case BoundOperatorKind.LessOrEqual:
             {
-                if (leftType.TryUnify(rightType, out var unifiedType) && unifiedType.IsNumericType())
+                if (!leftType.TryUnify(rightType, out var unifiedType) || !unifiedType.IsNumericType())
                 {
-                    operandType = unifiedType;
-                    resultType = BuiltInPackage.BoolType;
+                    break;
                 }
 
-                break;
+                @operator = new BoundOperator(operatorKind, unifiedType, BuiltInPackage.BoolType);
+                return true;
             }
 
             case BoundOperatorKind.Equals:
             case BoundOperatorKind.NotEquals:
             {
-                if (leftType.TryUnify(rightType, out var unifiedType))
+                if (!leftType.TryUnify(rightType, out var unifiedType))
                 {
-                    operandType = unifiedType;
-                    resultType = BuiltInPackage.BoolType;
+                    break;
                 }
 
-                break;
+                @operator = new BoundOperator(operatorKind, unifiedType, BuiltInPackage.BoolType);
+                return true;
             }
 
             // `&` and `|` operators are defined for the s32, u32, s64 and u64 types.
@@ -156,30 +199,30 @@ internal readonly struct BoundOperator
 
                     PrimitiveTypeKind.Signed8 or PrimitiveTypeKind.Signed16 => BuiltInPackage.Signed32Type,
                     PrimitiveTypeKind.Unsigned8 or PrimitiveTypeKind.Unsigned16 => BuiltInPackage.Unsigned32Type,
-                    _ => PlaceholderTypeSymbol.UnknownType
+                    _ => PlaceholderTypeSymbol.Instance
                 };
 
-                operandType = unifiedType;
-                resultType = unifiedType;
-                break;
+                @operator = new BoundOperator(operatorKind, unifiedType, unifiedType);
+                return true;
             }
 
             case BoundOperatorKind.LogicalAnd:
             case BoundOperatorKind.LogicalOr:
             {
-                if (leftType == BuiltInPackage.BoolType && rightType == BuiltInPackage.BoolType)
+                if (leftType != BuiltInPackage.BoolType || rightType != BuiltInPackage.BoolType)
                 {
-                    operandType = BuiltInPackage.BoolType;
-                    resultType = BuiltInPackage.BoolType;
+                    break;
                 }
 
-                break;
+                @operator = new BoundOperator(operatorKind, BuiltInPackage.BoolType, BuiltInPackage.BoolType);
+                return true;
             }
 
             default:
                 throw new UnreachableException();
         }
 
-        return new BoundOperator(operatorKind, operandType, resultType);
+        @operator = default;
+        return false;
     }
 }

@@ -175,7 +175,7 @@ internal sealed class BoundMissingExpression(MissingExpressionSyntax syntax) : B
 {
     public override BoundNodeKind Kind => BoundNodeKind.MissingExpression;
     public override ExpressionSyntax Syntax { get; } = syntax;
-    public override TypeSymbol Type => PlaceholderTypeSymbol.UnknownType;
+    public override TypeSymbol Type => PlaceholderTypeSymbol.Instance;
 }
 
 internal sealed class BoundLiteralExpression(LiteralExpressionSyntax syntax, TypeSymbol type, object value)
@@ -199,7 +199,7 @@ internal sealed class BoundIdentifierExpression(IdentifierExpressionSyntax synta
         {
             return ReferencedSymbol switch
             {
-                MissingSymbol => PlaceholderTypeSymbol.UnknownType,
+                PlaceholderSymbol => PlaceholderTypeSymbol.Instance,
                 TypeSymbol => PlaceholderTypeSymbol.MetaType,
                 EnumCaseSymbol e => e.Enum,
                 FieldSymbol f => f.Type,

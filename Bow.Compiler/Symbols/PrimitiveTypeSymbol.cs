@@ -3,8 +3,7 @@ using Bow.Compiler.Syntax;
 
 namespace Bow.Compiler.Symbols;
 
-internal sealed class PrimitiveTypeSymbol(string name, PrimitiveTypeKind primitiveTypeKind)
-    : TypeSymbol
+internal sealed class PrimitiveTypeSymbol(string name, PrimitiveTypeKind primitiveTypeKind) : TypeSymbol
 {
     public override string Name { get; } = name;
     public override SyntaxNode Syntax => throw new InvalidOperationException();
@@ -93,7 +92,6 @@ internal sealed class PrimitiveTypeSymbol(string name, PrimitiveTypeKind primiti
             || this.IsUnsigned() && otherAsPrimitive.IsUnsigned()
             || !this.IsUnsigned() && !otherAsPrimitive.IsUnsigned();
 
-        return areCompatible
-            && otherAsPrimitive.GetSizeInBytes() >= otherAsPrimitive.GetSizeInBytes();
+        return areCompatible && this.GetSizeInBytes() <= otherAsPrimitive.GetSizeInBytes();
     }
 }

@@ -19,7 +19,7 @@ internal sealed class BlockBinder : Binder
         : base(parent)
     {
         _function = function;
-        _ambientTypeStack.Push(PlaceholderTypeSymbol.UnknownType);
+        _ambientTypeStack.Push(PlaceholderTypeSymbol.Instance);
     }
 
     private Dictionary<string, LocalSymbol>? _lazyLocals;
@@ -73,6 +73,7 @@ internal sealed class BlockBinder : Binder
         _ambientTypeStack.Push(type);
         var initializer = BindExpression(syntax.Initializer.Expression, diagnostics);
         _ambientTypeStack.Pop();
+
         if (type == PlaceholderTypeSymbol.ToBeInferred)
         {
             type = initializer.Type;
@@ -206,7 +207,7 @@ internal sealed class BlockBinder : Binder
         var assignee = BindExpression(syntax.Assignee, diagnostics);
 
         var isAssignable = TryGetReferencedSymbol(assignee, out var referencedSymbol);
-        _ambientTypeStack.Push(isAssignable ? assignee.Type : PlaceholderTypeSymbol.UnknownType);
+        _ambientTypeStack.Push(isAssignable ? assignee.Type : PlaceholderTypeSymbol.Instance);
 
         var expression = BindExpression(syntax.Expression, diagnostics);
 
@@ -255,7 +256,7 @@ internal sealed class BlockBinder : Binder
                 symbol = ((BoundIdentifierExpression)expression).ReferencedSymbol;
                 return true;
             default:
-                symbol = MissingSymbol.Instance;
+                symbol = PlaceholderSymbol.Instance;
                 return false;
         }
     }
@@ -316,8 +317,7 @@ internal sealed class BlockBinder : Binder
                 }
 
                 bool shouldReportError =
-                    ambientType != PlaceholderTypeSymbol.ToBeInferred
-                        && ambientType != PlaceholderTypeSymbol.UnknownType
+                    ambientType != PlaceholderTypeSymbol.ToBeInferred && ambientType != PlaceholderTypeSymbol.Instance
                     || ambientType.PrimitiveTypeKind is PrimitiveTypeKind.Float32 or PrimitiveTypeKind.Float64;
 
                 if (shouldReportError)
@@ -465,7 +465,7 @@ internal sealed class BlockBinder : Binder
         if (symbol == null)
         {
             diagnostics.AddError(syntax.Identifier, DiagnosticMessages.NameNotFound, name);
-            symbol = MissingSymbol.Instance;
+            symbol = PlaceholderSymbol.Instance;
         }
 
         return new BoundIdentifierExpression(syntax, symbol);
@@ -481,14 +481,14 @@ internal sealed class BlockBinder : Binder
         }
         else
         {
-            function = MissingFunctionSymbol.Instance;
-            if (expression.Type != PlaceholderTypeSymbol.UnknownType)
+            function = PlaceholderFunctionSymbol.Instance;
+            if (expression.Type != PlaceholderTypeSymbol.Instance)
             {
                 diagnostics.AddError(syntax.Callee, DiagnosticMessages.ExpressionNotCallable, expression.Type.Name);
             }
         }
 
-        if (syntax.Arguments.Count != function.Parameters.Length && function != MissingFunctionSymbol.Instance)
+        if (syntax.Arguments.Count != function.Parameters.Length && function != PlaceholderFunctionSymbol.Instance)
         {
             diagnostics.AddError(
                 syntax,
@@ -502,7 +502,7 @@ internal sealed class BlockBinder : Binder
         for (var i = 0; i < syntax.Arguments.Count; i++)
         {
             var parameter = function.Parameters.ElementAtOrDefault(i);
-            _ambientTypeStack.Push(parameter == null ? PlaceholderTypeSymbol.UnknownType : parameter.Type);
+            _ambientTypeStack.Push(parameter == null ? PlaceholderTypeSymbol.Instance : parameter.Type);
 
             var argumentSyntax = syntax.Arguments[i];
             var argument = BindExpression(argumentSyntax, diagnostics);
@@ -516,13 +516,18 @@ internal sealed class BlockBinder : Binder
     private BoundUnaryExpression BindUnaryExpression(UnaryExpressionSyntax syntax, DiagnosticBag diagnostics)
     {
         var operand = BindExpression(syntax.Operand, diagnostics);
-        var @operator = BoundOperator.UnaryOperatorFor(syntax.Operator.Kind, operand.Type);
-        if (operand.Type == PlaceholderTypeSymbol.UnknownType)
+        BoundOperator @operator;
+        if (operand.Type == PlaceholderTypeSymbol.Instance)
         {
+            @operator = BoundOperator.CreateErrorUnaryOperator(syntax.Operator.Kind);
             return new BoundUnaryExpression(syntax, @operator, operand);
         }
 
-        if (@operator.OperandType == PlaceholderTypeSymbol.UnknownType)
+        if (BoundOperator.TryBindUnaryOperator(syntax.Operator.Kind, operand.Type, out @operator))
+        {
+            operand = CreateImplicitCastExpression(operand, @operator.OperandType);
+        }
+        else
         {
             diagnostics.AddError(
                 syntax.Operator,
@@ -530,10 +535,6 @@ internal sealed class BlockBinder : Binder
                 SyntaxFacts.GetKindDisplayText(syntax.Operator.Kind),
                 operand.Type.Name
             );
-        }
-        else
-        {
-            operand = CreateImplicitCastExpression(operand, @operator.OperandType);
         }
 
         return new BoundUnaryExpression(syntax, @operator, operand);
@@ -543,13 +544,19 @@ internal sealed class BlockBinder : Binder
     {
         var left = BindExpression(syntax.Left, diagnostics);
         var right = BindExpression(syntax.Right, diagnostics);
-        var @operator = BoundOperator.BinaryOperatorFor(syntax.Operator.Kind, left.Type, right.Type);
-        if (left.Type.IsMissing || right.Type.IsMissing)
+        BoundOperator @operator;
+        if (left.Type.IsPlaceholder || right.Type.IsPlaceholder)
         {
+            @operator = BoundOperator.CreateErrorBinaryOperator(syntax.Operator.Kind);
             return new BoundBinaryExpression(syntax, left, @operator, right);
         }
 
-        if (@operator.ResultType.IsMissing)
+        if (BoundOperator.TryBindBinaryOperator(syntax.Operator.Kind, left.Type, right.Type, out @operator))
+        {
+            left = CreateImplicitCastExpression(left, @operator.OperandType);
+            right = CreateImplicitCastExpression(right, @operator.OperandType);
+        }
+        else
         {
             diagnostics.AddError(
                 syntax.Operator,
@@ -558,11 +565,6 @@ internal sealed class BlockBinder : Binder
                 left.Type.Name,
                 right.Type.Name
             );
-        }
-        else
-        {
-            left = CreateImplicitCastExpression(left, @operator.OperandType);
-            right = CreateImplicitCastExpression(right, @operator.OperandType);
         }
 
         return new BoundBinaryExpression(syntax, left, @operator, right);
@@ -631,7 +633,7 @@ internal sealed class BlockBinder : Binder
             fieldInitializers.Add(fieldInitializer);
         }
 
-        var type = (TypeSymbol?)@struct ?? PlaceholderTypeSymbol.UnknownType;
+        var type = (TypeSymbol?)@struct ?? PlaceholderTypeSymbol.Instance;
         return new BoundStructCreationExpression(syntax, type, fieldInitializers.MoveToImmutable());
     }
 }

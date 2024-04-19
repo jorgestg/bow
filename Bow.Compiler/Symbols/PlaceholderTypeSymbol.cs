@@ -10,36 +10,35 @@ public sealed class PlaceholderTypeSymbol : TypeSymbol
     /// <summary>
     /// Placeholder type for missing type references or errors in binding.
     /// </summary>
-    public static readonly PlaceholderTypeSymbol UnknownType = new("???", true);
+    public static readonly PlaceholderTypeSymbol Instance = new("???");
 
     /// <summary>
     /// Placeholder for a type that is currently being inferred.
     /// </summary>
-    public static readonly PlaceholderTypeSymbol ToBeInferred = new("???", true);
+    public static readonly PlaceholderTypeSymbol ToBeInferred = new("???");
 
     /// <summary>
     /// Placeholder type for types.
     /// </summary>
-    public static readonly PlaceholderTypeSymbol MetaType = new("type", false);
+    public static readonly PlaceholderTypeSymbol MetaType = new("type");
 
     /// <summary>
     /// Placeholder type for packages.
     /// </summary>
-    public static readonly PlaceholderTypeSymbol PackageType = new("package", false);
+    public static readonly PlaceholderTypeSymbol PackageType = new("package");
 
     /// <summary>
     /// Placeholder type for modules.
     /// </summary>
-    public static readonly PlaceholderTypeSymbol ModuleType = new("module", false);
+    public static readonly PlaceholderTypeSymbol ModuleType = new("module");
 
-    private PlaceholderTypeSymbol(string name, bool isMissing)
+    private PlaceholderTypeSymbol(string name)
     {
         Name = name;
-        IsMissing = isMissing;
     }
 
     public override string Name { get; }
     public override SyntaxNode Syntax => throw new InvalidOperationException();
     public override ModuleSymbol Module => throw new InvalidOperationException();
-    public override bool IsMissing { get; }
+    public override bool IsPlaceholder => true;
 }

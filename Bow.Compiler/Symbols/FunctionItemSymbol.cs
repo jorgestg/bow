@@ -36,9 +36,7 @@ public sealed class FunctionItemSymbol(ModuleSymbol module, FunctionDefinitionSy
 
     private ImmutableArray<Diagnostic> _lazyDiagnostics;
     public ImmutableArray<Diagnostic> Diagnostics =>
-        _lazyDiagnostics.IsDefault
-            ? _lazyDiagnostics = _diagnosticBag.ToImmutableArray()
-            : _lazyDiagnostics;
+        _lazyDiagnostics.IsDefault ? _lazyDiagnostics = _diagnosticBag.ToImmutableArray() : _lazyDiagnostics;
 
     ItemSyntax IItemSymbol.Syntax => Syntax;
 
@@ -79,9 +77,7 @@ public sealed class FunctionItemSymbol(ModuleSymbol module, FunctionDefinitionSy
 
     private TypeSymbol BindReturnType()
     {
-        return Syntax.ReturnType == null
-            ? BuiltInPackage.UnitType
-            : Binder.BindType(Syntax.ReturnType, _diagnosticBag);
+        return Syntax.ReturnType == null ? BuiltInPackage.UnitType : Binder.BindType(Syntax.ReturnType, _diagnosticBag);
     }
 
     private FrozenDictionary<string, ParameterSymbol> CreateParameterMap()
@@ -94,11 +90,7 @@ public sealed class FunctionItemSymbol(ModuleSymbol module, FunctionDefinitionSy
                 continue;
             }
 
-            _diagnosticBag.AddError(
-                parameter.Syntax,
-                DiagnosticMessages.NameIsAlreadyDefined,
-                parameter.Name
-            );
+            _diagnosticBag.AddError(parameter.Syntax, DiagnosticMessages.NameIsAlreadyDefined, parameter.Name);
         }
 
         return map.ToFrozenDictionary();

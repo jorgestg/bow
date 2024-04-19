@@ -5,8 +5,6 @@ namespace Bow.Compiler.Symbols;
 
 public sealed class FunctionTypeSymbol(FunctionSymbol function) : TypeSymbol
 {
-    public static readonly FunctionTypeSymbol Missing = new(MissingFunctionSymbol.Instance);
-
     private string? _lazyName;
     public override string Name
     {
@@ -60,12 +58,12 @@ public sealed class FunctionTypeSymbol(FunctionSymbol function) : TypeSymbol
             return false;
         }
 
-        if (!Function.ReturnType.IsSameType(otherAsFunction.Function.ReturnType))
+        if (Function.Parameters.Length != otherAsFunction.Function.Parameters.Length)
         {
             return false;
         }
 
-        if (Function.Parameters.Length != otherAsFunction.Function.Parameters.Length)
+        if (!Function.ReturnType.IsSameType(otherAsFunction.Function.ReturnType))
         {
             return false;
         }

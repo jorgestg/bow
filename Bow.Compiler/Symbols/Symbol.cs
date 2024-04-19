@@ -17,5 +17,5 @@ public abstract class Symbol
     public abstract ModuleSymbol Module { get; }
     public virtual SymbolAccessibility Accessibility => SymbolAccessibility.Private;
     public virtual bool IsMutable => false;
-    public virtual bool IsMissing => false;
+    public virtual bool IsPlaceholder => false;
 }

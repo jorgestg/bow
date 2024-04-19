@@ -2,14 +2,17 @@ using Bow.Compiler.Syntax;
 
 namespace Bow.Compiler.Symbols;
 
-public sealed class MissingSymbol : Symbol
+/// <summary>
+/// Represents a symbol that was not found.
+/// </summary>
+public sealed class PlaceholderSymbol : Symbol
 {
-    public static readonly MissingSymbol Instance = new();
+    public static readonly PlaceholderSymbol Instance = new();
 
-    private MissingSymbol() { }
+    private PlaceholderSymbol() { }
 
     public override string Name => "???";
     public override SyntaxNode Syntax => throw new InvalidOperationException();
     public override ModuleSymbol Module => throw new InvalidOperationException();
-    public override bool IsMissing => true;
+    public override bool IsPlaceholder => true;
 }

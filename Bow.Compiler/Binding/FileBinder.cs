@@ -27,7 +27,7 @@ internal sealed class FileBinder : Binder
         foreach (var useClause in syntaxTree.Root.UseClauses)
         {
             var importedSymbol = module.Binder.BindName(useClause.Name, diagnostics);
-            if (importedSymbol.IsMissing)
+            if (importedSymbol.IsPlaceholder)
             {
                 continue;
             }
@@ -84,14 +84,13 @@ internal sealed class FileBinder : Binder
                 }
 
                 diagnostics.AddError(namedType.Name, DiagnosticMessages.NameIsNotAType, namedType.Name.ToString());
-
-                return PlaceholderTypeSymbol.UnknownType;
+                return PlaceholderTypeSymbol.Instance;
             }
 
             case SyntaxKind.MissingTypeReference:
             {
                 // Diagnostic already reported
-                return PlaceholderTypeSymbol.UnknownType;
+                return PlaceholderTypeSymbol.Instance;
             }
         }
 
@@ -109,7 +108,7 @@ internal sealed class FileBinder : Binder
 
         if (symbol == null)
         {
-            return MissingSymbol.Instance;
+            return PlaceholderSymbol.Instance;
         }
 
         if (!IsAccessible(symbol))
@@ -141,7 +140,7 @@ internal sealed class FileBinder : Binder
         }
 
         diagnostics.AddError(syntax, DiagnosticMessages.NameNotFound, name);
-        return MissingSymbol.Instance;
+        return PlaceholderSymbol.Instance;
     }
 
     private Symbol? BindQualifiedName(QualifiedNameSyntax syntax, DiagnosticBag diagnostics)

@@ -27,7 +27,7 @@ internal sealed class ModuleBinder(ModuleSymbol module) : Binder(module.Package.
             _ => throw new UnreachableException()
         };
 
-        return symbol ?? MissingSymbol.Instance;
+        return symbol ?? PlaceholderSymbol.Instance;
     }
 
     private Symbol? BindSimpleName(SimpleNameSyntax syntax, DiagnosticBag diagnostics)
@@ -40,7 +40,7 @@ internal sealed class ModuleBinder(ModuleSymbol module) : Binder(module.Package.
         }
 
         diagnostics.AddError(syntax, DiagnosticMessages.NameNotFound, name);
-        return MissingSymbol.Instance;
+        return PlaceholderSymbol.Instance;
     }
 
     private ModuleSymbol? BindQualifiedName(QualifiedNameSyntax syntax, DiagnosticBag diagnostics)
