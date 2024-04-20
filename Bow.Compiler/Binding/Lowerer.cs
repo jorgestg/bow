@@ -64,7 +64,7 @@ internal sealed class Lowerer : BoundTreeRewriter
             var endLabel = _labelGenerator.GenerateLabel();
             BoundConditionalGotoStatement gotoEnd = new(node.Syntax, endLabel, node.Condition, jumpIfFalse: true);
             BoundLabelDeclarationStatement endLabelDeclaration = new(node.Syntax, endLabel);
-            BoundBlockStatement block = new(node.Syntax.Then, [gotoEnd, node.Then, endLabelDeclaration]);
+            BoundBlockStatement block = new(node.Syntax, [gotoEnd, node.Then, endLabelDeclaration]);
             return RewriteBlockStatement(block);
         }
         else
@@ -83,10 +83,7 @@ internal sealed class Lowerer : BoundTreeRewriter
             BoundLabelDeclarationStatement elseLabelDeclaration = new(node.Syntax, elseLabel);
             BoundLabelDeclarationStatement endLabelDeclaration = new(node.Syntax, endLabel);
             BoundBlockStatement block =
-                new(
-                    node.Syntax.Then,
-                    [gotoElse, node.Then, gotoEnd, elseLabelDeclaration, node.Else, endLabelDeclaration]
-                );
+                new(node.Syntax, [gotoElse, node.Then, gotoEnd, elseLabelDeclaration, node.Else, endLabelDeclaration]);
 
             return RewriteBlockStatement(block);
         }

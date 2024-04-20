@@ -1,101 +1,7 @@
 using Bow.Compiler.Symbols;
+using Bow.Compiler.Syntax;
 
-namespace Bow.Compiler.Binding;
-
-internal enum BasicBlockKind
-{
-    Normal,
-    Start,
-    End
-}
-
-internal sealed class BasicBlock(
-    BasicBlockKind kind,
-    ImmutableArray<BoundStatement> statements,
-    ImmutableArray<BasicBlockBranch> incoming,
-    ImmutableArray<BasicBlockBranch> outgoing
-)
-{
-    public BasicBlockKind Kind { get; } = kind;
-    public ImmutableArray<BoundStatement> Statements { get; } = statements;
-    public ImmutableArray<BasicBlockBranch> Incoming { get; } = incoming;
-    public ImmutableArray<BasicBlockBranch> Outgoing { get; } = outgoing;
-}
-
-internal sealed class BasicBlockBuilder(BasicBlockKind kind, ImmutableArray<BoundStatement> statements)
-{
-    public BasicBlockKind Kind { get; } = kind;
-    public ImmutableArray<BoundStatement> Statements { get; } = statements;
-
-    private List<BasicBlockBranchBuilder>? _lazyIncoming;
-    public List<BasicBlockBranchBuilder> Incoming => _lazyIncoming ??= [];
-
-    private List<BasicBlockBranchBuilder>? _lazyOutgoing;
-    public List<BasicBlockBranchBuilder> Outgoing => _lazyOutgoing ??= [];
-
-    private BasicBlock? _lazyBasicBlock;
-    public BasicBlock BasicBlock
-    {
-        get
-        {
-            if (_lazyBasicBlock != null)
-                return _lazyBasicBlock;
-
-            ImmutableArray<BasicBlockBranch> incoming;
-            if (_lazyIncoming?.Count > 0)
-            {
-                var builder = ImmutableArray.CreateBuilder<BasicBlockBranch>(_lazyIncoming.Count);
-                foreach (var branchBuilder in _lazyIncoming)
-                    builder.Add(branchBuilder.BasicBlockBranch);
-
-                incoming = builder.MoveToImmutable();
-            }
-            else
-            {
-                incoming = [];
-            }
-
-            ImmutableArray<BasicBlockBranch> outgoing;
-            if (_lazyOutgoing?.Count > 0)
-            {
-                var builder = ImmutableArray.CreateBuilder<BasicBlockBranch>(_lazyOutgoing.Count);
-                foreach (var branchBuilder in _lazyOutgoing)
-                    builder.Add(branchBuilder.BasicBlockBranch);
-
-                outgoing = builder.MoveToImmutable();
-            }
-            else
-            {
-                outgoing = [];
-            }
-
-            return _lazyBasicBlock ??= new BasicBlock(Kind, Statements, incoming, outgoing);
-        }
-    }
-}
-
-internal sealed class BasicBlockBranch(BasicBlockBranchBuilder builder)
-{
-    private readonly BasicBlockBranchBuilder _builder = builder;
-
-    private BasicBlock? _lazyFrom;
-    public BasicBlock From => _lazyFrom ??= _builder.From.BasicBlock;
-
-    private BasicBlock? _lazyTo;
-    public BasicBlock To => _lazyTo ??= _builder.To.BasicBlock;
-
-    public BoundExpression? Condition => _builder.Condition;
-}
-
-internal sealed class BasicBlockBranchBuilder(BasicBlockBuilder from, BasicBlockBuilder to, BoundExpression? condition)
-{
-    public BasicBlockBuilder From { get; } = from;
-    public BasicBlockBuilder To { get; } = to;
-    public BoundExpression? Condition { get; } = condition;
-
-    private BasicBlockBranch? _lazyBasicBlockBranch;
-    public BasicBlockBranch BasicBlockBranch => _lazyBasicBlockBranch ??= new BasicBlockBranch(this);
-}
+namespace Bow.Compiler.Binding.ControlFlow;
 
 internal readonly struct ControlFlowGraph
 {
@@ -161,14 +67,15 @@ internal readonly struct ControlFlowGraph
                 return;
             }
 
-            BasicBlockBuilder blockBuilder = new(BasicBlockKind.Normal, [.. statements]);
+            BasicBlockBuilder blockBuilder = new(BasicBlockKind.Intermediate, [.. statements]);
             blocks.Add(blockBuilder);
             statements.Clear();
         }
     }
 
-    private static ControlFlowGraph Build(List<BasicBlockBuilder> blockBuilders)
+    public static ControlFlowGraph Create(BoundBlockStatement block)
     {
+        var blockBuilders = CreateBlockBuilders(block);
         if (blockBuilders.Count == 0)
         {
             BasicBlock start = new(BasicBlockKind.Start, statements: [], incoming: [], outgoing: []);
@@ -238,15 +145,30 @@ internal readonly struct ControlFlowGraph
                         Debug.Assert(branchBuilders != null);
 
                         var conditionalGoto = (BoundConditionalGotoStatement)statement;
+
                         var targetBlock = blockFromLabel[conditionalGoto.Label];
-#error Handle JumpIfFalse
-                        var branch = Connect(blockBuilder, targetBlock, conditionalGoto.Condition);
-                        branchBuilders.Add(branch);
+
+                        var currentBlockIndex = blockBuilders.IndexOf(blockBuilder);
+                        var fallthroughBlock =
+                            currentBlockIndex == blockBuilders.Count - 1
+                                ? endBuilder
+                                : blockBuilders[currentBlockIndex + 1];
+
+                        var negatedCondition = NegateCondition(conditionalGoto.Condition);
+                        var targetCondition = conditionalGoto.JumpIfFalse
+                            ? negatedCondition
+                            : conditionalGoto.Condition;
+
+                        var fallthroughCondition = conditionalGoto.JumpIfFalse
+                            ? conditionalGoto.Condition
+                            : negatedCondition;
+
+                        branchBuilders.Add(Connect(blockBuilder, targetBlock, targetCondition));
+                        branchBuilders.Add(Connect(blockBuilder, fallthroughBlock, fallthroughCondition));
                         break;
                     }
                     case BoundNodeKind.ReturnStatement:
                     {
-                        Debug.Assert(blockFromLabel != null);
                         Debug.Assert(branchBuilders != null);
 
                         var branch = Connect(blockBuilder, endBuilder);
@@ -298,6 +220,15 @@ internal readonly struct ControlFlowGraph
             from.Outgoing.Add(branch);
             to.Incoming.Add(branch);
             return branch;
+        }
+
+        static BoundExpression NegateCondition(BoundExpression condition)
+        {
+            var @operator = BoundOperator.TryBindUnaryOperator(SyntaxKind.NotKeyword, condition.Type, out var op)
+                ? op
+                : BoundOperator.CreateErrorUnaryOperator(SyntaxKind.NotKeyword);
+
+            return new BoundUnaryExpression(condition.Syntax, @operator, condition);
         }
     }
 }
