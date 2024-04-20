@@ -137,7 +137,7 @@ internal sealed class BlockBinder : Binder
         return new BoundWhileStatement(syntax, condition, body, breakLabel, continueLabel);
     }
 
-    private BoundBreakStatement BindBreakStatement(BreakStatementSyntax syntax, DiagnosticBag diagnostics)
+    private BoundGotoStatement BindBreakStatement(BreakStatementSyntax syntax, DiagnosticBag diagnostics)
     {
         if (_breakLabel.IsDefault)
         {
@@ -148,10 +148,10 @@ internal sealed class BlockBinder : Binder
             );
         }
 
-        return new BoundBreakStatement(syntax, _breakLabel);
+        return new BoundGotoStatement(syntax, _breakLabel);
     }
 
-    private BoundContinueStatement BindContinueStatement(ContinueStatementSyntax syntax, DiagnosticBag diagnostics)
+    private BoundGotoStatement BindContinueStatement(ContinueStatementSyntax syntax, DiagnosticBag diagnostics)
     {
         if (_continueLabel.IsDefault)
         {
@@ -162,7 +162,7 @@ internal sealed class BlockBinder : Binder
             );
         }
 
-        return new BoundContinueStatement(syntax, _continueLabel);
+        return new BoundGotoStatement(syntax, _continueLabel);
     }
 
     private BoundReturnStatement BindReturnStatement(ReturnStatementSyntax syntax, DiagnosticBag diagnostics)

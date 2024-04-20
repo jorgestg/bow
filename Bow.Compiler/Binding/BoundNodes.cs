@@ -10,8 +10,6 @@ internal enum BoundNodeKind
     BlockStatement,
     IfStatement,
     WhileStatement,
-    BreakStatement,
-    ContinueStatement,
     ReturnStatement,
     AssignmentStatement,
     ExpressionStatement,
@@ -91,20 +89,6 @@ internal sealed class BoundWhileStatement(
     public BoundStatement Body { get; } = body;
     public BoundLabel BreakLabel { get; } = breakLabel;
     public BoundLabel ContinueLabel { get; } = continueLabel;
-}
-
-internal sealed class BoundBreakStatement(BreakStatementSyntax syntax, BoundLabel label) : BoundStatement
-{
-    public override BoundNodeKind Kind => BoundNodeKind.BreakStatement;
-    public override BreakStatementSyntax Syntax { get; } = syntax;
-    public BoundLabel Label { get; } = label;
-}
-
-internal sealed class BoundContinueStatement(ContinueStatementSyntax syntax, BoundLabel label) : BoundStatement
-{
-    public override BoundNodeKind Kind => BoundNodeKind.ContinueStatement;
-    public override ContinueStatementSyntax Syntax { get; } = syntax;
-    public BoundLabel Label { get; } = label;
 }
 
 internal sealed class BoundReturnStatement(ReturnStatementSyntax syntax, BoundExpression? expression) : BoundStatement
